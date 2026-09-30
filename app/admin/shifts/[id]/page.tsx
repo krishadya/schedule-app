@@ -3,6 +3,10 @@ import { notFound, redirect } from "next/navigation";
 
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
+import {
+  StaffAssignmentControl,
+  type AssignmentRoleOption,
+} from "./assignment-control";
 
 type AvailabilityResponse = "yes" | "maybe" | "no";
 type AvailabilityStatus = AvailabilityResponse | "no_response";
@@ -17,6 +21,7 @@ type StaffAvailability = {
     suggestedEndTime: string | null;
     note: string | null;
   } | null;
+  assignedRole: string | null;
 };
 
 const UUID_PATTERN =
@@ -145,18 +150,23 @@ export default async function AdminShiftDetailsPage({
     notFound();
   }
 
-  const [profilesResult, responsesResult] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, full_name, username")
-      .eq("role", "staff"),
-    supabase
-      .from("availability_responses")
-      .select(
-        "user_id, response, suggested_start_time, suggested_end_time, note",
-      )
-      .eq("shift_id", shift.id),
-  ]);
+  const [profilesResult, responsesResult, assignmentsResult] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, full_name, username")
+        .eq("role", "staff"),
+      supabase
+        .from("availability_responses")
+        .select(
+          "user_id, response, suggested_start_time, suggested_end_time, note",
+        )
+        .eq("shift_id", shift.id),
+      supabase
+        .from("assignments")
+        .select("id, user_id, assigned_role")
+        .eq("shift_id", shift.id),
+    ]);
 
   if (profilesResult.error) {
     throw new Error("Unable to load staff profiles.");
@@ -166,12 +176,40 @@ export default async function AdminShiftDetailsPage({
     throw new Error("Unable to load availability responses.");
   }
 
+  if (assignmentsResult.error) {
+    throw new Error("Unable to load assignments.");
+  }
+
   const responsesByUser = new Map(
     responsesResult.data.map((response) => [response.user_id, response]),
   );
+  const assignmentsByUser = new Map(
+    assignmentsResult.data.map((assignment) => [assignment.user_id, assignment]),
+  );
+
+  const assignedCounts = new Map(
+    shift.shift_requirements.map((requirement) => [requirement.role, 0]),
+  );
+
+  for (const assignment of assignmentsResult.data) {
+    const currentCount = assignedCounts.get(assignment.assigned_role);
+
+    if (currentCount !== undefined) {
+      assignedCounts.set(assignment.assigned_role, currentCount + 1);
+    }
+  }
+
+  const assignmentRoles: AssignmentRoleOption[] = shift.shift_requirements
+    .map((requirement) => ({
+      role: requirement.role,
+      staffNeeded: requirement.staff_needed,
+      assignedCount: assignedCounts.get(requirement.role) ?? 0,
+    }))
+    .sort((first, second) => first.role.localeCompare(second.role));
 
   const staff: StaffAvailability[] = profilesResult.data.map((profile) => {
     const response = responsesByUser.get(profile.id);
+    const assignment = assignmentsByUser.get(profile.id);
 
     if (response && !isAvailabilityResponse(response.response)) {
       throw new Error("An availability response has an invalid status.");
@@ -189,6 +227,7 @@ export default async function AdminShiftDetailsPage({
             note: response.note,
           }
         : null,
+      assignedRole: assignment?.assigned_role ?? null,
     };
   });
 
@@ -285,6 +324,45 @@ export default async function AdminShiftDetailsPage({
         </section>
 
         <section className="mt-6">
+          <h2 className="text-xl font-semibold text-slate-900">Assignments</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Current staffing against each required role.
+          </p>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {assignmentRoles.map((role) => (
+              <div
+                key={role.role}
+                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-semibold text-slate-900">{role.role}</h3>
+                  {role.assignedCount >= role.staffNeeded ? (
+                    <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">
+                      Full
+                    </span>
+                  ) : null}
+                </div>
+                <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <dt className="text-slate-500">Needed</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {role.staffNeeded}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Assigned</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {role.assignedCount}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-slate-900">
@@ -374,6 +452,13 @@ export default async function AdminShiftDetailsPage({
                         {member.response.note}
                       </p>
                     ) : null}
+
+                    <StaffAssignmentControl
+                      shiftId={shift.id}
+                      userId={member.id}
+                      assignedRole={member.assignedRole}
+                      roles={assignmentRoles}
+                    />
                   </li>
                 );
               })}
