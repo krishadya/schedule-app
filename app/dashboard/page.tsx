@@ -22,14 +22,22 @@ export default async function DashboardPage() {
             ? "Manage shifts and staff availability."
             : "View shifts and submit your availability."}
         </p>
-        {isAdmin ? (
+        <div className="flex flex-col items-center gap-3 sm:flex-row">
           <Link
-            href="/admin"
+            href="/shifts"
             className="inline-block rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
           >
-            Open Admin Dashboard
+            View Available Shifts
           </Link>
-        ) : null}
+          {isAdmin ? (
+            <Link
+              href="/admin"
+              className="inline-block rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+            >
+              Open Admin Dashboard
+            </Link>
+          ) : null}
+        </div>
         <form action={signOut}>
           <button
             type="submit"
