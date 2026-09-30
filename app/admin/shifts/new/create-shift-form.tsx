@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
+import { createShift, type ActionState } from "../actions";
 
 type StaffRequirement = {
   id: string;
@@ -9,10 +10,16 @@ type StaffRequirement = {
   count: number;
 };
 
+const initialState: ActionState = { error: null };
+
 export function CreateShiftForm() {
   const [requirements, setRequirements] = useState<StaffRequirement[]>([
     { id: crypto.randomUUID(), role: "", count: 1 },
   ]);
+  const [state, formAction, isPending] = useActionState(
+    createShift,
+    initialState,
+  );
 
   const addRequirement = () => {
     setRequirements([
@@ -28,22 +35,33 @@ export function CreateShiftForm() {
   const updateRequirement = (
     id: string,
     field: keyof Omit<StaffRequirement, "id">,
-    value: string | number
+    value: string | number,
   ) => {
     setRequirements(
       requirements.map((req) =>
-        req.id === id ? { ...req, [field]: value } : req
-      )
+        req.id === id ? { ...req, [field]: value } : req,
+      ),
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Do not save any data yet per Milestone 5A.
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form action={formAction} className="space-y-6">
+      <input
+        type="hidden"
+        name="requirements"
+        value={JSON.stringify(requirements)}
+      />
+
+      {state.error && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-md bg-red-50 p-4 text-sm text-red-700"
+        >
+          {state.error}
+        </div>
+      )}
+
       <div className="space-y-4">
         <div>
           <label
@@ -55,6 +73,7 @@ export function CreateShiftForm() {
           <input
             type="text"
             id="eventName"
+            name="eventName"
             required
             className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           />
@@ -71,6 +90,7 @@ export function CreateShiftForm() {
             <input
               type="date"
               id="date"
+              name="date"
               required
               className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
             />
@@ -86,6 +106,7 @@ export function CreateShiftForm() {
             <input
               type="datetime-local"
               id="responseDeadline"
+              name="responseDeadline"
               required
               className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
             />
@@ -103,6 +124,7 @@ export function CreateShiftForm() {
             <input
               type="time"
               id="startTime"
+              name="startTime"
               required
               className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
             />
@@ -118,6 +140,7 @@ export function CreateShiftForm() {
             <input
               type="time"
               id="endTime"
+              name="endTime"
               required
               className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
             />
@@ -134,6 +157,7 @@ export function CreateShiftForm() {
           <input
             type="text"
             id="location"
+            name="location"
             className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           />
         </div>
@@ -147,6 +171,7 @@ export function CreateShiftForm() {
           </label>
           <textarea
             id="notes"
+            name="notes"
             rows={3}
             className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           />
@@ -188,7 +213,7 @@ export function CreateShiftForm() {
                     updateRequirement(
                       req.id,
                       "count",
-                      parseInt(e.target.value) || 1
+                      parseInt(e.target.value) || 1,
                     )
                   }
                   className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
@@ -218,16 +243,17 @@ export function CreateShiftForm() {
 
       <div className="flex items-center justify-end gap-4 border-t border-slate-200 pt-6">
         <Link
-          href="/admin"
+          href="/admin/shifts"
           className="rounded-md px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700"
         >
           Cancel
         </Link>
         <button
           type="submit"
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+          disabled={isPending}
+          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Create Shift
+          {isPending ? "Creating..." : "Create Shift"}
         </button>
       </div>
     </form>

@@ -15,12 +15,20 @@ export default async function AdminPage() {
       <h1 className="text-2xl font-semibold text-slate-900">
         Admin Dashboard
       </h1>
-      <Link
-        href="/admin/shifts/new"
-        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
-      >
-        Create Shift
-      </Link>
+      <div className="flex gap-4">
+        <Link
+          href="/admin/shifts"
+          className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+        >
+          View Shifts
+        </Link>
+        <Link
+          href="/admin/shifts/new"
+          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+        >
+          Create Shift
+        </Link>
+      </div>
     </main>
   );
 }
