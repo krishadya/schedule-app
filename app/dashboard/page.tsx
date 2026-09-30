@@ -1,34 +1,35 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
 
 import { signOut } from "./actions";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedProfile } from "@/lib/auth/profile";
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-
-  if (!data?.claims) {
-    redirect("/login");
-  }
-
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("full_name, username")
-    .eq("id", data.claims.sub)
-    .single();
-
-  if (error || !profile) {
-    throw new Error("Unable to load the authenticated user profile.");
-  }
+  const profile = await getAuthenticatedProfile();
+  const isAdmin = profile.role === "admin";
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
       <div className="space-y-4 text-center">
         <h1 className="text-2xl font-semibold text-slate-900">
-          Signed in successfully
+          Welcome, {profile.full_name}
         </h1>
-        <p className="text-slate-700">{profile.full_name}</p>
         <p className="text-slate-600">@{profile.username}</p>
+        <p className="font-medium text-slate-800">
+          {isAdmin ? "Admin" : "Staff"}
+        </p>
+        <p className="text-slate-600">
+          {isAdmin
+            ? "Manage shifts and staff availability."
+            : "View shifts and submit your availability."}
+        </p>
+        {isAdmin ? (
+          <Link
+            href="/admin"
+            className="inline-block rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+          >
+            Open Admin Dashboard
+          </Link>
+        ) : null}
         <form action={signOut}>
           <button
             type="submit"
