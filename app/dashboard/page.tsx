@@ -1,63 +1,76 @@
 import Link from "next/link";
 
-import { signOut } from "./actions";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
+
+const staffActions = [
+  {
+    href: "/shifts",
+    title: "View Available Shifts",
+    description: "Review upcoming shifts and submit your availability.",
+  },
+  {
+    href: "/schedule",
+    title: "My Schedule",
+    description: "See the shifts you are confirmed to work.",
+  },
+  {
+    href: "/account",
+    title: "My Account",
+    description: "View your profile and change your password.",
+  },
+];
 
 export default async function DashboardPage() {
   const profile = await getAuthenticatedProfile();
   const isAdmin = profile.role === "admin";
+  const actions = isAdmin
+    ? [
+        {
+          href: "/admin",
+          title: "Admin Dashboard",
+          description: "Manage shifts, review availability, and manage staff accounts.",
+        },
+        ...staffActions,
+      ]
+    : staffActions;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
-      <div className="space-y-4 text-center">
-        <h1 className="text-2xl font-semibold text-slate-900">
-          Welcome, {profile.full_name}
-        </h1>
-        <p className="text-slate-600">@{profile.username}</p>
-        <p className="font-medium text-slate-800">
-          {isAdmin ? "Admin" : "Staff"}
-        </p>
-        <p className="text-slate-600">
-          {isAdmin
-            ? "Manage shifts and staff availability."
-            : "View shifts and submit your availability."}
-        </p>
-        <div className="flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
-          <Link
-            href="/account"
-            className="inline-block rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
-          >
-            My Account
-          </Link>
-          <Link
-            href="/schedule"
-            className="inline-block rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
-          >
-            My Schedule
-          </Link>
-          <Link
-            href="/shifts"
-            className="inline-block rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
-          >
-            View Available Shifts
-          </Link>
+    <main className="px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-5xl">
+        <header className="mb-8">
+          <h1 className="break-words text-2xl font-semibold text-slate-900">
+            Welcome, {profile.full_name}
+          </h1>
+          <p className="mt-1 break-words text-slate-600">@{profile.username}</p>
           {isAdmin ? (
-            <Link
-              href="/admin"
-              className="inline-block rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
-            >
-              Open Admin Dashboard
-            </Link>
+            <p className="mt-3 inline-flex rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
+              Admin
+            </p>
           ) : null}
-        </div>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+        </header>
+
+        <section aria-labelledby="quick-actions-heading">
+          <h2
+            id="quick-actions-heading"
+            className="mb-4 text-lg font-semibold text-slate-900"
           >
-            Sign Out
-          </button>
-        </form>
+            Quick actions
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {actions.map((action) => (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 sm:p-6"
+              >
+                <h3 className="font-semibold text-slate-900">{action.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {action.description}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
       </div>
     </main>
   );
