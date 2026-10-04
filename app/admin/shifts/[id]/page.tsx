@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
+import { DeleteShiftControl } from "./delete-shift-control";
 import {
   StaffAssignmentControl,
   type AssignmentRoleOption,
@@ -266,12 +267,18 @@ export default async function AdminShiftDetailsPage({
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-4xl">
-        <div className="mb-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Link
             href="/admin/shifts"
             className="text-sm font-semibold text-slate-700 hover:text-slate-900"
           >
             ← Back to Shifts
+          </Link>
+          <Link
+            href={`/admin/shifts/${shift.id}/edit`}
+            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+          >
+            Edit Shift
           </Link>
         </div>
 
@@ -465,6 +472,7 @@ export default async function AdminShiftDetailsPage({
             </ul>
           )}
         </section>
+        <DeleteShiftControl shiftId={shift.id} eventName={shift.event_name} />
       </div>
     </main>
   );
