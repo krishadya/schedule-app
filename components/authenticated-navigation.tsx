@@ -7,6 +7,7 @@ import type { ProfileRole } from "@/lib/auth/profile";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/calendar", label: "Calendar" },
   { href: "/shifts", label: "Available Shifts" },
   { href: "/schedule", label: "My Schedule" },
   { href: "/account", label: "My Account" },

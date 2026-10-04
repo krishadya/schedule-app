@@ -5,6 +5,12 @@ import { getAuthenticatedProfile } from "@/lib/auth/profile";
 
 const staffActions = [
   {
+    href: "/calendar",
+    title: "Calendar",
+    description: "See assignments, availability, and upcoming shifts together.",
+    icon: "calendar" as const,
+  },
+  {
     href: "/shifts",
     title: "Available Shifts",
     description: "Review upcoming shifts and submit your availability.",

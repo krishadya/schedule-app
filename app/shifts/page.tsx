@@ -147,7 +147,8 @@ export default async function ShiftsPage() {
               return (
                 <article
                   key={shift.id}
-                  className="surface-card overflow-hidden p-5 sm:p-6"
+                  id={`shift-${shift.id}`}
+                  className="surface-card scroll-mt-32 overflow-hidden p-5 sm:p-6"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <h2 className="text-xl font-semibold tracking-tight text-slate-950">
