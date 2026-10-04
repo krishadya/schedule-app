@@ -24,6 +24,12 @@ export default async function DashboardPage() {
         </p>
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
           <Link
+            href="/account"
+            className="inline-block rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+          >
+            My Account
+          </Link>
+          <Link
             href="/schedule"
             className="inline-block rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
           >
