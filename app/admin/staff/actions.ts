@@ -14,7 +14,11 @@ export type CreateStaffActionState = {
   message: string | null;
 };
 
+export type ResetStaffPasswordActionState = CreateStaffActionState;
+
 const USERNAME_PATTERN = /^[a-z0-9._-]+$/;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MINIMUM_PASSWORD_LENGTH = 8;
 const DUPLICATE_USER_CODES = new Set(["email_exists", "user_already_exists"]);
 
@@ -125,5 +129,91 @@ export async function createStaffAccount(
   return {
     status: "success",
     message: `Staff account created for @${username}.`,
+  };
+}
+
+export async function resetStaffPassword(
+  targetUserId: string,
+  _previousState: ResetStaffPasswordActionState,
+  formData: FormData,
+): Promise<ResetStaffPasswordActionState> {
+  const authenticatedProfile = await getAuthenticatedProfile();
+
+  if (authenticatedProfile.role !== "admin") {
+    redirect("/dashboard");
+  }
+
+  if (!UUID_PATTERN.test(targetUserId)) {
+    return errorState("The selected staff account is invalid.");
+  }
+
+  const newPassword = getTextValue(formData, "newPassword");
+  const confirmPassword = getTextValue(formData, "confirmPassword");
+
+  if (!newPassword || !confirmPassword) {
+    return errorState("Both password fields are required.");
+  }
+
+  if (newPassword.length < MINIMUM_PASSWORD_LENGTH) {
+    return errorState(
+      `Temporary password must be at least ${MINIMUM_PASSWORD_LENGTH} characters.`,
+    );
+  }
+
+  if (newPassword !== confirmPassword) {
+    return errorState("Passwords do not match.");
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data: targetProfile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, role")
+      .eq("id", targetUserId)
+      .maybeSingle();
+
+    if (profileError) {
+      return errorState("The staff account could not be verified. Please try again.");
+    }
+
+    if (!targetProfile) {
+      return errorState("The selected staff account no longer exists.");
+    }
+
+    if (targetProfile.role !== "staff") {
+      return errorState("Only staff account passwords can be reset here.");
+    }
+
+    let adminSupabase;
+
+    try {
+      adminSupabase = createAdminClient();
+    } catch {
+      return errorState("Password reset is not configured on the server.");
+    }
+
+    const { error: updateError } =
+      await adminSupabase.auth.admin.updateUserById(targetProfile.id, {
+        password: newPassword,
+      });
+
+    if (updateError) {
+      if (updateError.code === "weak_password") {
+        return errorState(
+          "The temporary password does not meet the configured password requirements.",
+        );
+      }
+
+      return errorState("The password could not be reset. Please try again.");
+    }
+  } catch {
+    return errorState("The password could not be reset. Please try again.");
+  }
+
+  revalidatePath("/admin/staff");
+
+  return {
+    status: "success",
+    message: "Password reset successfully.",
   };
 }

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { CreateStaffForm } from "./create-staff-form";
+import { ResetPasswordControl } from "./reset-password-control";
 
 export default async function AdminStaffPage() {
   const authenticatedProfile = await getAuthenticatedProfile();
@@ -73,19 +74,25 @@ export default async function AdminStaffPage() {
                 {staff.map((staffMember) => (
                   <li
                     key={staffMember.id}
-                    className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-start sm:justify-between"
                   >
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-semibold text-slate-900">
                         {staffMember.full_name}
                       </p>
-                      <p className="text-sm text-slate-500">
+                      <p className="break-all text-sm text-slate-500">
                         @{staffMember.username}
                       </p>
+                      <span className="mt-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                        Staff
+                      </span>
                     </div>
-                    <span className="self-start rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 sm:self-auto">
-                      Staff
-                    </span>
+                    {staffMember.role === "staff" ? (
+                      <ResetPasswordControl
+                        staffId={staffMember.id}
+                        fullName={staffMember.full_name}
+                      />
+                    ) : null}
                   </li>
                 ))}
               </ul>
