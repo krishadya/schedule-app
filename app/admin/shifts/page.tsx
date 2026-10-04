@@ -1,7 +1,28 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { AppIcon } from "@/components/ui/app-icon";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function formatDate(date: string) {
+  return dateFormatter.format(new Date(`${date}T00:00:00Z`));
+}
+
+function formatTime(time: string) {
+  const [hours, minutes] = time.split(":").map(Number);
+  const period = hours >= 12 ? "PM" : "AM";
+  const twelveHour = hours % 12 || 12;
+
+  return `${twelveHour}:${String(minutes).padStart(2, "0")} ${period}`;
+}
 
 export default async function AdminShiftsPage() {
   const profile = await getAuthenticatedProfile();
@@ -36,21 +57,31 @@ export default async function AdminShiftsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4 sm:p-8">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-900">Shifts</h1>
+    <main className="page-shell">
+      <div className="page-container">
+        <header className="page-header">
+          <div>
+            <p className="page-eyebrow">Shift management</p>
+            <h1 className="page-title">Shifts</h1>
+            <p className="page-description">
+              Review event staffing, responses, and assignments.
+            </p>
+          </div>
           <Link
             href="/admin/shifts/new"
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+            className="btn btn-primary self-start"
           >
+            <AppIcon name="plus" className="h-4 w-4" />
             Create Shift
           </Link>
-        </div>
+        </header>
 
         {shifts.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-            <h2 className="text-lg font-medium text-slate-900">
+          <div className="empty-state">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+              <AppIcon name="calendar" className="h-6 w-6" />
+            </span>
+            <h2 className="mt-4 text-lg font-semibold text-slate-900">
               No shifts found
             </h2>
             <p className="mt-2 text-sm text-slate-500">
@@ -58,7 +89,7 @@ export default async function AdminShiftsPage() {
             </p>
             <Link
               href="/admin/shifts/new"
-              className="mt-6 inline-flex rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+              className="btn btn-primary mt-6"
             >
               Create your first shift
             </Link>
@@ -66,43 +97,58 @@ export default async function AdminShiftsPage() {
         ) : (
           <div className="space-y-4">
             {shifts.map((shift) => (
-              <div
+              <article
                 key={shift.id}
-                className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+                className="surface-card p-5 sm:p-6"
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold text-slate-900">
+                  <div className="min-w-0">
+                    <h2 className="break-words text-xl font-semibold tracking-tight text-slate-950">
                       {shift.event_name}
                     </h2>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {shift.date} • {shift.start_time.slice(0, 5)} –{" "}
-                      {shift.end_time.slice(0, 5)}
-                      {shift.location ? ` • ${shift.location}` : ""}
-                    </p>
+                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
+                      <p className="flex items-center gap-2">
+                        <AppIcon name="calendar" className="h-4 w-4 text-indigo-500" />
+                        {formatDate(shift.date)}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <AppIcon name="clock" className="h-4 w-4 text-indigo-500" />
+                        {formatTime(shift.start_time)} – {formatTime(shift.end_time)}
+                      </p>
+                      {shift.location ? (
+                        <p className="flex items-center gap-2">
+                          <AppIcon name="location" className="h-4 w-4 text-indigo-500" />
+                          {shift.location}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
                   <Link
                     href={`/admin/shifts/${shift.id}`}
-                    className="self-start rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+                    className="btn btn-secondary self-start"
                   >
                     View Responses
                   </Link>
                 </div>
-                <div className="mt-4 border-t border-slate-100 pt-4">
-                  <h3 className="text-sm font-medium text-slate-900">
-                    Requirements
+                <div className="mt-5 border-t border-slate-100 pt-4">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <AppIcon name="users" className="h-4 w-4 text-indigo-500" />
+                    Staffing requirements
                   </h3>
-                  <ul className="mt-2 space-y-1">
+                  <ul className="mt-3 flex flex-wrap gap-2">
                     {shift.shift_requirements?.map(
                       (req: { role: string; staff_needed: number }) => (
-                        <li key={req.role} className="text-sm text-slate-600">
+                        <li
+                          key={req.role}
+                          className="rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700"
+                        >
                           {req.role} × {req.staff_needed}
                         </li>
                       ),
                     )}
                   </ul>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}

@@ -1,4 +1,4 @@
-# Vernon Schedule System
+# Schedule App
 
 Staff availability and event scheduling built with Next.js, TypeScript, and Tailwind CSS.
 

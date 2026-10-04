@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   saveAvailability,
   type AvailabilityActionState,
@@ -52,7 +53,7 @@ function responseOptionClasses(
   selectedResponse: AvailabilityResponse | null,
 ) {
   if (response !== selectedResponse) {
-    return "border-slate-300 bg-white text-slate-700 hover:bg-slate-50";
+    return "border-slate-300 bg-white text-slate-700 hover:border-indigo-300 hover:bg-indigo-50";
   }
 
   if (response === "yes") {
@@ -82,23 +83,29 @@ export function AvailabilityForm({
 
   if (deadlinePassed) {
     return (
-      <section className="mt-5 border-t border-slate-100 pt-4">
+      <section className="mt-5 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-slate-900">
             Your availability
           </h3>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-            Responses closed
-          </span>
+          <StatusBadge>Responses closed</StatusBadge>
         </div>
 
         {initialAvailability ? (
           <div className="mt-3 space-y-2 text-sm text-slate-700">
             <p>
               Response:{" "}
-              <span className="font-semibold">
+              <StatusBadge
+                tone={
+                  initialAvailability.response === "yes"
+                    ? "emerald"
+                    : initialAvailability.response === "maybe"
+                      ? "amber"
+                      : "rose"
+                }
+              >
                 {formatResponse(initialAvailability.response)}
-              </span>
+              </StatusBadge>
             </p>
             {initialAvailability.response === "maybe" &&
             (initialAvailability.suggestedStartTime ||
@@ -128,18 +135,28 @@ export function AvailabilityForm({
   }
 
   return (
-    <form action={formAction} className="mt-5 border-t border-slate-100 pt-4">
+    <form action={formAction} className="mt-5 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
       <input type="hidden" name="shiftId" value={shiftId} />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-slate-900">
           Your availability
         </h3>
-        <p className="text-xs text-slate-600">
-          {initialAvailability
-            ? `Saved response: ${formatResponse(initialAvailability.response)}`
-            : "No response submitted yet"}
-        </p>
+        {initialAvailability ? (
+          <StatusBadge
+            tone={
+              initialAvailability.response === "yes"
+                ? "emerald"
+                : initialAvailability.response === "maybe"
+                  ? "amber"
+                  : "rose"
+            }
+          >
+            Saved: {formatResponse(initialAvailability.response)}
+          </StatusBadge>
+        ) : (
+          <StatusBadge>No response</StatusBadge>
+        )}
       </div>
 
       <fieldset disabled={isPending} className="mt-3">
@@ -148,7 +165,7 @@ export function AvailabilityForm({
           {responseOptions.map((option) => (
             <label
               key={option.value}
-              className={`cursor-pointer rounded-md border px-3 py-2 text-center text-sm font-semibold transition ${responseOptionClasses(option.value, selectedResponse)}`}
+              className={`cursor-pointer rounded-lg border px-3 py-2.5 text-center text-sm font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-indigo-600 ${responseOptionClasses(option.value, selectedResponse)}`}
             >
               <input
                 type="radio"
@@ -168,7 +185,7 @@ export function AvailabilityForm({
             <div>
               <label
                 htmlFor={`suggested-start-${shiftId}`}
-                className="block text-xs font-medium text-slate-700"
+                className="form-label-small"
               >
                 Available from
               </label>
@@ -181,13 +198,13 @@ export function AvailabilityForm({
                     ? (initialAvailability.suggestedStartTime?.slice(0, 5) ?? "")
                     : ""
                 }
-                className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                className="form-input"
               />
             </div>
             <div>
               <label
                 htmlFor={`suggested-end-${shiftId}`}
-                className="block text-xs font-medium text-slate-700"
+                className="form-label-small"
               >
                 Available until
               </label>
@@ -200,7 +217,7 @@ export function AvailabilityForm({
                     ? (initialAvailability.suggestedEndTime?.slice(0, 5) ?? "")
                     : ""
                 }
-                className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                className="form-input"
               />
             </div>
           </div>
@@ -209,7 +226,7 @@ export function AvailabilityForm({
         <div className="mt-4">
           <label
             htmlFor={`availability-note-${shiftId}`}
-            className="block text-xs font-medium text-slate-700"
+            className="form-label-small"
           >
             Note <span className="font-normal text-slate-500">(optional)</span>
           </label>
@@ -218,14 +235,14 @@ export function AvailabilityForm({
             name="note"
             rows={2}
             defaultValue={initialAvailability?.note ?? ""}
-            className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            className="form-input"
           />
         </div>
 
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div aria-live="polite" className="text-sm">
             {state.status === "error" ? (
-              <p role="alert" className="text-red-700">
+              <p role="alert" className="text-rose-700">
                 {state.message}
               </p>
             ) : null}
@@ -236,7 +253,7 @@ export function AvailabilityForm({
           <button
             type="submit"
             disabled={isPending || selectedResponse === null}
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn btn-primary w-full sm:w-auto"
           >
             {isPending
               ? "Saving..."

@@ -10,10 +10,16 @@ export default async function NewShiftPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4 sm:p-8">
-      <div className="mx-auto max-w-2xl">
-        <h1 className="mb-6 text-2xl font-bold text-slate-900">Create Shift</h1>
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+    <main className="page-shell">
+      <div className="mx-auto max-w-3xl">
+        <header className="mb-7">
+          <p className="page-eyebrow">Shift management</p>
+          <h1 className="page-title">Create Shift</h1>
+          <p className="page-description">
+            Add event details, response timing, and staffing requirements.
+          </p>
+        </header>
+        <div className="surface-card p-5 sm:p-8">
           <CreateShiftForm />
         </div>
       </div>

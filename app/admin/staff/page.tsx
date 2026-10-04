@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { AppIcon } from "@/components/ui/app-icon";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { CreateStaffForm } from "./create-staff-form";
@@ -26,20 +28,19 @@ export default async function AdminStaffPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <main className="page-shell">
+      <div className="page-container">
+        <header className="page-header">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">
-              Manage Staff
-            </h1>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="page-eyebrow">Staff administration</p>
+            <h1 className="page-title">Manage Staff</h1>
+            <p className="page-description">
               Create staff accounts and review the current staff roster.
             </p>
           </div>
           <Link
             href="/admin"
-            className="self-start rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+            className="btn btn-secondary self-start"
           >
             Back to Admin Dashboard
           </Link>
@@ -51,7 +52,7 @@ export default async function AdminStaffPage() {
           <section>
             <div className="flex items-end justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">
+                <h2 className="section-title">
                   Staff Accounts
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
@@ -64,8 +65,11 @@ export default async function AdminStaffPage() {
             </div>
 
             {staff.length === 0 ? (
-              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-                <p className="text-sm text-slate-600">
+              <div className="empty-state mt-4 p-8">
+                <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+                  <AppIcon name="users" />
+                </span>
+                <p className="mt-3 text-sm text-slate-600">
                   No staff accounts have been created yet.
                 </p>
               </div>
@@ -74,7 +78,7 @@ export default async function AdminStaffPage() {
                 {staff.map((staffMember) => (
                   <li
                     key={staffMember.id}
-                    className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-start sm:justify-between"
+                    className="surface-card flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between"
                   >
                     <div className="min-w-0">
                       <p className="font-semibold text-slate-900">
@@ -83,9 +87,9 @@ export default async function AdminStaffPage() {
                       <p className="break-all text-sm text-slate-500">
                         @{staffMember.username}
                       </p>
-                      <span className="mt-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                        Staff
-                      </span>
+                      <div className="mt-2">
+                        <StatusBadge>Staff</StatusBadge>
+                      </div>
                     </div>
                     {staffMember.role === "staff" ? (
                       <ResetPasswordControl

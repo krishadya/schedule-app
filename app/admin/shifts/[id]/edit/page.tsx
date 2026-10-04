@@ -19,13 +19,17 @@ export default async function EditShiftPage({ params }: { params: Promise<{ id: 
   if (!shift) notFound();
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4 sm:p-8">
-      <div className="mx-auto max-w-2xl">
-        <h1 className="text-2xl font-bold text-slate-900">Edit Shift</h1>
-        <p className="mb-6 mt-2 text-sm text-slate-600">
-          Roles with assigned staff must be retained, with enough spaces for their assignments.
-        </p>
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+    <main className="page-shell">
+      <div className="mx-auto max-w-3xl">
+        <header className="mb-7">
+          <p className="page-eyebrow">Shift management</p>
+          <h1 className="page-title">Edit Shift</h1>
+          <p className="page-description">
+            Roles with assigned staff must be retained, with enough spaces for
+            their assignments.
+          </p>
+        </header>
+        <div className="surface-card p-5 sm:p-8">
           <ShiftForm
             action={editShift.bind(null, shift.id, shift.updated_at)}
             cancelHref={`/admin/shifts/${shift.id}`}

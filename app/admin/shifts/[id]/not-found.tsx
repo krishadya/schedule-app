@@ -1,10 +1,14 @@
 import Link from "next/link";
+import { AppIcon } from "@/components/ui/app-icon";
 
 export default function ShiftNotFound() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
-      <div className="max-w-md text-center">
-        <h1 className="text-2xl font-semibold text-slate-900">
+    <main className="page-shell flex items-center justify-center">
+      <div className="surface-card max-w-md p-8 text-center sm:p-10">
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+          <AppIcon name="calendar" className="h-6 w-6" />
+        </span>
+        <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-950">
           Shift not found
         </h1>
         <p className="mt-2 text-slate-600">
@@ -12,7 +16,7 @@ export default function ShiftNotFound() {
         </p>
         <Link
           href="/admin/shifts"
-          className="mt-6 inline-flex rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+          className="btn btn-primary mt-6"
         >
           Back to Shifts
         </Link>

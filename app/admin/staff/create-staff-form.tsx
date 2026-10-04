@@ -29,9 +29,9 @@ export function CreateStaffForm() {
     <form
       ref={formRef}
       action={formAction}
-      className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+      className="surface-card p-5 sm:p-6"
     >
-      <h2 className="text-lg font-semibold text-slate-900">
+      <h2 className="section-title">
         Create Staff Account
       </h2>
       <p className="mt-1 text-sm text-slate-600">
@@ -42,7 +42,7 @@ export function CreateStaffForm() {
         <div>
           <label
             htmlFor="fullName"
-            className="block text-sm font-medium text-slate-700"
+            className="form-label"
           >
             Full Name
           </label>
@@ -52,14 +52,14 @@ export function CreateStaffForm() {
             type="text"
             autoComplete="name"
             required
-            className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            className="form-input"
           />
         </div>
 
         <div>
           <label
             htmlFor="username"
-            className="block text-sm font-medium text-slate-700"
+            className="form-label"
           >
             Username
           </label>
@@ -71,9 +71,9 @@ export function CreateStaffForm() {
             required
             spellCheck={false}
             aria-describedby="username-help"
-            className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm lowercase text-slate-900"
+            className="form-input lowercase"
           />
-          <p id="username-help" className="mt-1 text-xs text-slate-500">
+          <p id="username-help" className="form-help">
             Letters, numbers, underscore, dot, and hyphen only.
           </p>
         </div>
@@ -81,7 +81,7 @@ export function CreateStaffForm() {
         <div>
           <label
             htmlFor="password"
-            className="block text-sm font-medium text-slate-700"
+            className="form-label"
           >
             Temporary Password
           </label>
@@ -92,28 +92,28 @@ export function CreateStaffForm() {
             autoComplete="new-password"
             required
             minLength={8}
-            className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            className="form-input"
           />
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="form-help">
             Use at least 8 characters.
           </p>
         </div>
 
         <div aria-live="polite">
           {state.status === "error" ? (
-            <p role="alert" className="text-sm text-red-700">
+            <p role="alert" className="alert-error">
               {state.message}
             </p>
           ) : null}
           {state.status === "success" ? (
-            <p className="text-sm text-emerald-700">{state.message}</p>
+            <p className="alert-success">{state.message}</p>
           ) : null}
         </div>
 
         <button
           type="submit"
           disabled={isPending}
-          className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn btn-primary w-full"
         >
           {isPending ? "Creating..." : "Create Staff Account"}
         </button>

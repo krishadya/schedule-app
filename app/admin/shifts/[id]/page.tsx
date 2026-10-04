@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { AppIcon } from "@/components/ui/app-icon";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { DeleteShiftControl } from "./delete-shift-control";
@@ -88,20 +90,22 @@ function getStatusLabel(status: AvailabilityStatus) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
-function getStatusClasses(status: AvailabilityStatus) {
+function getStatusTone(
+  status: AvailabilityStatus,
+): "emerald" | "amber" | "rose" | "slate" {
   if (status === "yes") {
-    return "bg-emerald-100 text-emerald-800";
+    return "emerald";
   }
 
   if (status === "maybe") {
-    return "bg-amber-100 text-amber-800";
+    return "amber";
   }
 
   if (status === "no") {
-    return "bg-rose-100 text-rose-800";
+    return "rose";
   }
 
-  return "bg-slate-100 text-slate-600";
+  return "slate";
 }
 
 export default async function AdminShiftDetailsPage({
@@ -265,56 +269,76 @@ export default async function AdminShiftDetailsPage({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-4xl">
+    <main className="page-shell">
+      <div className="page-container">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Link
             href="/admin/shifts"
-            className="text-sm font-semibold text-slate-700 hover:text-slate-900"
+            className="btn btn-ghost px-0"
           >
             ← Back to Shifts
           </Link>
           <Link
             href={`/admin/shifts/${shift.id}/edit`}
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+            className="btn btn-secondary"
           >
             Edit Shift
           </Link>
         </div>
 
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h1 className="text-2xl font-semibold text-slate-900">
-            {shift.event_name}
-          </h1>
-          <div className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+        <section className="surface-card overflow-hidden p-5 sm:p-7">
+          <div className="mb-5 flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100">
+              <AppIcon name="calendar" />
+            </span>
             <div>
-              <p className="font-medium text-slate-900">Date and time</p>
-              <p className="mt-1 text-slate-600">{formatDate(shift.date)}</p>
-              <p className="text-slate-600">
+              <p className="page-eyebrow">Shift details</p>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
+                {shift.event_name}
+              </h1>
+            </div>
+          </div>
+          <div className="grid gap-4 text-sm sm:grid-cols-2">
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="flex items-center gap-2 font-semibold text-slate-900">
+                <AppIcon name="clock" className="h-4 w-4 text-indigo-500" />
+                Date and time
+              </p>
+              <p className="mt-2 text-slate-600">{formatDate(shift.date)}</p>
+              <p className="mt-0.5 text-slate-600">
                 {formatTime(shift.start_time)} – {formatTime(shift.end_time)}
               </p>
             </div>
-            <div>
-              <p className="font-medium text-slate-900">Location</p>
-              <p className="mt-1 text-slate-600">
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="flex items-center gap-2 font-semibold text-slate-900">
+                <AppIcon name="location" className="h-4 w-4 text-indigo-500" />
+                Location
+              </p>
+              <p className="mt-2 text-slate-600">
                 {shift.location || "Not specified"}
               </p>
             </div>
-            <div>
-              <p className="font-medium text-slate-900">Response deadline</p>
-              <p className="mt-1 text-slate-600">
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="font-semibold text-slate-900">Response deadline</p>
+              <p className="mt-2 text-slate-600">
                 {formatDeadline(shift.response_deadline)}
               </p>
             </div>
-            <div>
-              <p className="font-medium text-slate-900">Staff requirements</p>
-              <ul className="mt-1 space-y-1 text-slate-600">
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="flex items-center gap-2 font-semibold text-slate-900">
+                <AppIcon name="users" className="h-4 w-4 text-indigo-500" />
+                Staff requirements
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-2 text-slate-600">
                 {[...shift.shift_requirements]
                   .sort((first, second) =>
                     first.role.localeCompare(second.role),
                   )
                   .map((requirement) => (
-                    <li key={requirement.role}>
+                    <li
+                      key={requirement.role}
+                      className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200"
+                    >
                       {requirement.role} × {requirement.staff_needed}
                     </li>
                   ))}
@@ -323,15 +347,15 @@ export default async function AdminShiftDetailsPage({
           </div>
 
           <div className="mt-5 border-t border-slate-100 pt-4">
-            <h2 className="text-sm font-medium text-slate-900">Notes</h2>
+            <h2 className="text-sm font-semibold text-slate-900">Notes</h2>
             <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">
               {shift.notes || "No notes."}
             </p>
           </div>
         </section>
 
-        <section className="mt-6">
-          <h2 className="text-xl font-semibold text-slate-900">Assignments</h2>
+        <section className="mt-8">
+          <h2 className="section-title">Assignments</h2>
           <p className="mt-1 text-sm text-slate-600">
             Current staffing against each required role.
           </p>
@@ -340,14 +364,12 @@ export default async function AdminShiftDetailsPage({
             {assignmentRoles.map((role) => (
               <div
                 key={role.role}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                className="surface-card p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-semibold text-slate-900">{role.role}</h3>
                   {role.assignedCount >= role.staffNeeded ? (
-                    <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">
-                      Full
-                    </span>
+                    <StatusBadge tone="emerald">Full</StatusBadge>
                   ) : null}
                 </div>
                 <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
@@ -369,10 +391,10 @@ export default async function AdminShiftDetailsPage({
           </div>
         </section>
 
-        <section className="mt-6">
+        <section className="mt-8">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">
+              <h2 className="section-title">
                 Staff Availability
               </h2>
               <p className="mt-1 text-sm text-slate-600">
@@ -390,10 +412,12 @@ export default async function AdminShiftDetailsPage({
             ).map((status) => (
               <div
                 key={status}
-                className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+                className="surface-card p-3"
               >
-                <dt className="text-xs font-medium text-slate-600">
-                  {getStatusLabel(status)}
+                <dt>
+                  <StatusBadge tone={getStatusTone(status)}>
+                    {getStatusLabel(status)}
+                  </StatusBadge>
                 </dt>
                 <dd className="mt-1 text-2xl font-semibold text-slate-900">
                   {counts[status]}
@@ -403,7 +427,7 @@ export default async function AdminShiftDetailsPage({
           </dl>
 
           {staff.length === 0 ? (
-            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <div className="empty-state mt-4 p-8">
               <p className="text-sm text-slate-600">
                 No staff profiles are available yet.
               </p>
@@ -416,7 +440,7 @@ export default async function AdminShiftDetailsPage({
                 return (
                   <li
                     key={member.id}
-                    className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+                    className="surface-card p-4 sm:p-5"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
@@ -427,11 +451,9 @@ export default async function AdminShiftDetailsPage({
                           @{member.username}
                         </p>
                       </div>
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(status)}`}
-                      >
+                      <StatusBadge tone={getStatusTone(status)}>
                         {getStatusLabel(status)}
-                      </span>
+                      </StatusBadge>
                     </div>
 
                     {member.response?.status === "maybe" &&

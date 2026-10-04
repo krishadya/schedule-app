@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Vernon Schedule System",
+  title: {
+    default: "Schedule App",
+    template: "%s | Schedule App",
+  },
   description: "Staff availability and event scheduling",
 };
 

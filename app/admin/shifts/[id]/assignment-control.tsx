@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   assignStaff,
   removeAssignment,
@@ -41,7 +42,7 @@ function AssignStaffForm({
       <input type="hidden" name="shiftId" value={shiftId} />
       <input type="hidden" name="userId" value={userId} />
 
-      <p className="text-sm font-medium text-slate-700">Not assigned</p>
+      <StatusBadge>Not assigned</StatusBadge>
       <fieldset
         disabled={isPending || !hasAvailableRole}
         className="mt-2 flex flex-col gap-2 sm:flex-row"
@@ -54,7 +55,7 @@ function AssignStaffForm({
           name="assignedRole"
           required
           defaultValue=""
-          className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 disabled:bg-slate-100"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-100"
         >
           <option value="" disabled>
             {hasAvailableRole ? "Select a role" : "All roles are full"}
@@ -73,14 +74,14 @@ function AssignStaffForm({
         <button
           type="submit"
           disabled={isPending || !hasAvailableRole}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn btn-primary"
         >
           {isPending ? "Assigning..." : "Assign"}
         </button>
       </fieldset>
 
       {state.error ? (
-        <p role="alert" className="mt-2 text-sm text-red-700">
+        <p role="alert" className="alert-error mt-3">
           {state.error}
         </p>
       ) : null}
@@ -104,20 +105,18 @@ function RemoveAssignmentForm({
       <input type="hidden" name="userId" value={userId} />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm font-semibold text-slate-800">
-          Assigned: {assignedRole}
-        </p>
+        <StatusBadge tone="indigo">Assigned: {assignedRole}</StatusBadge>
         <button
           type="submit"
           disabled={isPending}
-          className="self-start rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn btn-danger-outline self-start"
         >
           {isPending ? "Removing..." : "Remove Assignment"}
         </button>
       </div>
 
       {state.error ? (
-        <p role="alert" className="mt-2 text-sm text-red-700">
+        <p role="alert" className="alert-error mt-3">
           {state.error}
         </p>
       ) : null}

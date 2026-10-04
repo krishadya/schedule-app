@@ -48,7 +48,7 @@ export function ResetPasswordControl({
             <div>
               <label
                 htmlFor={`new-password-${staffId}`}
-                className="block text-xs font-medium text-slate-700"
+                className="form-label-small"
               >
                 New Temporary Password
               </label>
@@ -60,14 +60,14 @@ export function ResetPasswordControl({
                 required
                 minLength={8}
                 aria-label={`New temporary password for ${fullName}`}
-                className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                className="form-input"
               />
             </div>
 
             <div>
               <label
                 htmlFor={`confirm-password-${staffId}`}
-                className="block text-xs font-medium text-slate-700"
+                className="form-label-small"
               >
                 Confirm Temporary Password
               </label>
@@ -79,17 +79,17 @@ export function ResetPasswordControl({
                 required
                 minLength={8}
                 aria-label={`Confirm temporary password for ${fullName}`}
-                className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                className="form-input"
               />
             </div>
 
             {state.status === "error" ? (
-              <p role="alert" className="text-sm text-red-700">
+              <p role="alert" className="alert-error">
                 {state.message}
               </p>
             ) : null}
             {state.status === "success" ? (
-              <p className="text-sm text-emerald-700" aria-live="polite">
+              <p className="alert-success" aria-live="polite">
                 {state.message}
               </p>
             ) : null}
@@ -98,7 +98,7 @@ export function ResetPasswordControl({
               <button
                 type="submit"
                 disabled={isPending}
-                className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn btn-primary"
               >
                 {isPending ? "Resetting..." : "Reset Password"}
               </button>
@@ -109,7 +109,7 @@ export function ResetPasswordControl({
                   formRef.current?.reset();
                   setIsOpen(false);
                 }}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn btn-secondary"
               >
                 {state.status === "success" ? "Close" : "Cancel"}
               </button>
@@ -121,12 +121,12 @@ export function ResetPasswordControl({
           <button
             type="button"
             onClick={() => setIsOpen(true)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+            className="btn btn-secondary"
           >
             Reset Password
           </button>
           {state.status === "success" ? (
-            <p className="text-sm text-emerald-700" aria-live="polite">
+            <p className="text-sm font-medium text-emerald-700" aria-live="polite">
               {state.message}
             </p>
           ) : null}

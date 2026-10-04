@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { AppIcon } from "@/components/ui/app-icon";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 
@@ -92,28 +94,30 @@ export default async function SchedulePage() {
   });
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-3xl">
-        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <main className="page-shell">
+      <div className="mx-auto max-w-4xl">
+        <header className="page-header">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">
-              My Schedule
-            </h1>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="page-eyebrow">Confirmed assignments</p>
+            <h1 className="page-title">My Schedule</h1>
+            <p className="page-description">
               Your confirmed upcoming shifts.
             </p>
           </div>
           <Link
             href="/dashboard"
-            className="self-start rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+            className="btn btn-secondary self-start"
           >
             Back to Dashboard
           </Link>
         </header>
 
         {schedule.length === 0 ? (
-          <section className="rounded-xl border border-slate-200 bg-white px-6 py-12 text-center shadow-sm">
-            <h2 className="text-lg font-medium text-slate-900">
+          <section className="empty-state">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+              <AppIcon name="schedule" className="h-6 w-6" />
+            </span>
+            <h2 className="mt-4 text-lg font-semibold text-slate-900">
               No confirmed shifts
             </h2>
             <p className="mt-2 text-sm text-slate-600">
@@ -125,35 +129,47 @@ export default async function SchedulePage() {
             {schedule.map((assignment) => (
               <article
                 key={assignment.id}
-                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+                className="surface-card relative overflow-hidden p-5 sm:p-6"
               >
-                <h2 className="text-xl font-semibold text-slate-900">
-                  {assignment.shift.event_name}
-                </h2>
-                <p className="mt-2 font-medium text-slate-800">
-                  {formatDate(assignment.shift.date)}
-                </p>
-                <p className="mt-1 text-slate-700">
-                  {formatTime(assignment.shift.start_time)} –{" "}
-                  {formatTime(assignment.shift.end_time)}
-                </p>
-                {assignment.shift.location ? (
-                  <p className="mt-1 text-slate-600">
-                    {assignment.shift.location}
+                <div className="absolute inset-y-0 left-0 w-1 bg-indigo-500" />
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <h2 className="text-xl font-semibold tracking-tight text-slate-950">
+                    {assignment.shift.event_name}
+                  </h2>
+                  <StatusBadge tone="indigo">
+                    <AppIcon name="check" className="h-3.5 w-3.5" />
+                    Assigned
+                  </StatusBadge>
+                </div>
+                <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                  <p className="flex items-center gap-2 font-medium text-slate-800">
+                    <AppIcon name="calendar" className="h-4 w-4 text-indigo-500" />
+                    {formatDate(assignment.shift.date)}
                   </p>
-                ) : null}
+                  <p className="flex items-center gap-2">
+                    <AppIcon name="clock" className="h-4 w-4 text-indigo-500" />
+                    {formatTime(assignment.shift.start_time)} –{" "}
+                    {formatTime(assignment.shift.end_time)}
+                  </p>
+                  {assignment.shift.location ? (
+                    <p className="flex items-center gap-2 sm:col-span-2">
+                      <AppIcon name="location" className="h-4 w-4 text-indigo-500" />
+                      {assignment.shift.location}
+                    </p>
+                  ) : null}
+                </div>
 
-                <div className="mt-5 border-t border-slate-100 pt-4">
+                <div className="mt-5 rounded-xl bg-indigo-50 px-4 py-3 ring-1 ring-indigo-100">
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                     Assigned role
                   </p>
-                  <p className="mt-1 font-semibold text-slate-900">
+                  <p className="mt-1 font-semibold text-indigo-900">
                     {assignment.assignedRole}
                   </p>
                 </div>
 
                 {assignment.shift.notes ? (
-                  <div className="mt-4 rounded-md bg-slate-50 p-3">
+                  <div className="mt-4 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
                     <h3 className="text-sm font-semibold text-slate-900">
                       Notes
                     </h3>

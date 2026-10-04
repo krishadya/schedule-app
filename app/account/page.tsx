@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { AppIcon } from "@/components/ui/app-icon";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import { ChangePasswordForm } from "./change-password-form";
 
@@ -7,33 +9,43 @@ export default async function AccountPage() {
   const profile = await getAuthenticatedProfile();
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-xl">
-        <header className="mb-6 flex items-start justify-between gap-4">
+    <main className="page-shell">
+      <div className="mx-auto max-w-3xl">
+        <header className="page-header">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">
-              My Account
-            </h1>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="page-eyebrow">Profile & security</p>
+            <h1 className="page-title">My Account</h1>
+            <p className="page-description">
               Manage your account security.
             </p>
           </div>
           <Link
             href="/dashboard"
-            className="shrink-0 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+            className="btn btn-secondary shrink-0 self-start"
           >
             Dashboard
           </Link>
         </header>
 
-        <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h2 className="text-lg font-semibold text-slate-900">
-            {profile.full_name}
-          </h2>
-          <p className="mt-1 text-sm text-slate-600">@{profile.username}</p>
-          <p className="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-            {profile.role === "admin" ? "Admin" : "Staff"}
-          </p>
+        <section className="surface-card mb-6 p-5 sm:p-6">
+          <div className="flex items-center gap-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100">
+              <AppIcon name="account" className="h-6 w-6" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="break-words text-lg font-semibold text-slate-950">
+                {profile.full_name}
+              </h2>
+              <p className="break-all text-sm text-slate-500">
+                @{profile.username}
+              </p>
+            </div>
+            <div className="ml-auto self-start">
+              <StatusBadge tone={profile.role === "admin" ? "indigo" : "slate"}>
+                {profile.role === "admin" ? "Admin" : "Staff"}
+              </StatusBadge>
+            </div>
+          </div>
         </section>
 
         <ChangePasswordForm />
