@@ -6,21 +6,8 @@ import type {
   CalendarResponse,
   CalendarShift,
 } from "@/lib/calendar/types";
+import { getAppDateKey } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
-
-const APP_TIME_ZONE = "America/Los_Angeles";
-
-function getDateKey(date: Date) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: APP_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const values = new Map(parts.map((part) => [part.type, part.value]));
-
-  return `${values.get("year")}-${values.get("month")}-${values.get("day")}`;
-}
 
 function isCalendarResponse(value: string): value is CalendarResponse {
   return value === "yes" || value === "maybe" || value === "no";
@@ -37,7 +24,7 @@ export async function getCalendarData(
 ): Promise<CalendarData> {
   const supabase = await createClient();
   const requestTime = new Date();
-  const today = getDateKey(requestTime);
+  const today = getAppDateKey(requestTime);
   const requestTimestamp = requestTime.getTime();
 
   const { data: shifts, error: shiftsError } = await supabase

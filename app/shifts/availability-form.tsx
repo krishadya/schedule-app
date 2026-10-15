@@ -76,6 +76,17 @@ export function AvailabilityForm({
     useState<AvailabilityResponse | null>(
       initialAvailability?.response ?? null,
     );
+  const [suggestedStartTime, setSuggestedStartTime] = useState(
+    initialAvailability?.response === "maybe"
+      ? (initialAvailability.suggestedStartTime?.slice(0, 5) ?? "")
+      : "",
+  );
+  const [suggestedEndTime, setSuggestedEndTime] = useState(
+    initialAvailability?.response === "maybe"
+      ? (initialAvailability.suggestedEndTime?.slice(0, 5) ?? "")
+      : "",
+  );
+  const [note, setNote] = useState(initialAvailability?.note ?? "");
   const [state, formAction, isPending] = useActionState(
     saveAvailability,
     initialState,
@@ -193,11 +204,8 @@ export function AvailabilityForm({
                 id={`suggested-start-${shiftId}`}
                 name="suggestedStartTime"
                 type="time"
-                defaultValue={
-                  initialAvailability?.response === "maybe"
-                    ? (initialAvailability.suggestedStartTime?.slice(0, 5) ?? "")
-                    : ""
-                }
+                value={suggestedStartTime}
+                onChange={(event) => setSuggestedStartTime(event.target.value)}
                 className="form-input"
               />
             </div>
@@ -212,11 +220,8 @@ export function AvailabilityForm({
                 id={`suggested-end-${shiftId}`}
                 name="suggestedEndTime"
                 type="time"
-                defaultValue={
-                  initialAvailability?.response === "maybe"
-                    ? (initialAvailability.suggestedEndTime?.slice(0, 5) ?? "")
-                    : ""
-                }
+                value={suggestedEndTime}
+                onChange={(event) => setSuggestedEndTime(event.target.value)}
                 className="form-input"
               />
             </div>
@@ -234,7 +239,8 @@ export function AvailabilityForm({
             id={`availability-note-${shiftId}`}
             name="note"
             rows={2}
-            defaultValue={initialAvailability?.note ?? ""}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
             className="form-input"
           />
         </div>

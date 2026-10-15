@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AppIcon } from "@/components/ui/app-icon";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
+import { getAppDateKey } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -28,7 +29,7 @@ function formatTime(time: string) {
 export default async function SchedulePage() {
   const profile = await getAuthenticatedProfile();
   const supabase = await createClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getAppDateKey();
   const { data: assignments, error } = await supabase
     .from("assignments")
     .select("id, shift_id, assigned_role")

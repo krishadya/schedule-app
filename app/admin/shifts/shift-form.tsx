@@ -71,14 +71,12 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
   );
   const [state, formAction, isPending] = useActionState(
     async (previousState: ActionState, formData: FormData) => {
-      // Editing uses the browser's local time for display and an explicit instant on save.
-      if (initialValues) {
-        const deadline = formData.get("responseDeadline");
-        if (typeof deadline === "string" && deadline) {
-          const parsed = new Date(deadline);
-          if (!Number.isNaN(parsed.getTime())) {
-            formData.set("responseDeadline", parsed.toISOString());
-          }
+      // Datetime-local has no zone, so submit the instant represented in the browser.
+      const deadline = formData.get("responseDeadline");
+      if (typeof deadline === "string" && deadline) {
+        const parsed = new Date(deadline);
+        if (!Number.isNaN(parsed.getTime())) {
+          formData.set("responseDeadline", parsed.toISOString());
         }
       }
       return action(previousState, formData);

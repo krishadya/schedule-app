@@ -1,6 +1,7 @@
 import { AppIcon } from "@/components/ui/app-icon";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
+import { APP_TIME_ZONE, getAppDateKey } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
 import {
   AvailabilityForm,
@@ -21,6 +22,7 @@ const deadlineFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
   hour: "numeric",
   minute: "2-digit",
+  timeZone: APP_TIME_ZONE,
 });
 
 function formatShiftDate(date: string) {
@@ -52,7 +54,7 @@ export default async function ShiftsPage() {
 
   const supabase = await createClient();
   const requestTime = new Date();
-  const today = requestTime.toISOString().slice(0, 10);
+  const today = getAppDateKey(requestTime);
   const requestTimestamp = requestTime.getTime();
   const { data: shifts, error } = await supabase
     .from("shifts")
