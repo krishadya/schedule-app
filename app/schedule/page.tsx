@@ -132,12 +132,12 @@ export default async function SchedulePage() {
                 key={assignment.id}
                 className="surface-card relative overflow-hidden p-5 sm:p-6"
               >
-                <div className="absolute inset-y-0 left-0 w-1 bg-indigo-500" />
+                <div className="absolute inset-y-0 left-0 w-1 bg-emerald-500" />
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <h2 className="text-xl font-semibold tracking-tight text-slate-950">
                     {assignment.shift.event_name}
                   </h2>
-                  <StatusBadge tone="indigo">
+                  <StatusBadge tone="emerald">
                     <AppIcon name="check" className="h-3.5 w-3.5" />
                     Assigned
                   </StatusBadge>
@@ -160,11 +160,11 @@ export default async function SchedulePage() {
                   ) : null}
                 </div>
 
-                <div className="mt-5 rounded-xl bg-indigo-50 px-4 py-3 ring-1 ring-indigo-100">
+                <div className="mt-5 rounded-xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-100">
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                     Assigned role
                   </p>
-                  <p className="mt-1 font-semibold text-indigo-900">
+                  <p className="mt-1 font-semibold text-emerald-900">
                     {assignment.assignedRole}
                   </p>
                 </div>

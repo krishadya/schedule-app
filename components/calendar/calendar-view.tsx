@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { AppIcon } from "@/components/ui/app-icon";
+import { MetricCard } from "@/components/ui/metric-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type {
   CalendarShift,
@@ -485,40 +486,49 @@ export function CalendarView({
 
   return (
     <>
-      <section aria-label="Schedule summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="surface-card border-l-4 border-l-emerald-500 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Assigned
-          </p>
-          <p className="mt-1 text-2xl font-bold text-slate-950">
-            {counts.assigned}
-          </p>
-        </div>
-        <div className="surface-card border-l-4 border-l-indigo-500 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Available
-          </p>
-          <p className="mt-1 text-2xl font-bold text-slate-950">
-            {counts.available}
-          </p>
-        </div>
-        <div className="surface-card border-l-4 border-l-amber-500 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Maybe
-          </p>
-          <p className="mt-1 text-2xl font-bold text-slate-950">{counts.maybe}</p>
-        </div>
-        <div className="surface-card border-l-4 border-l-slate-400 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Needs Response
-          </p>
-          <p className="mt-1 text-2xl font-bold text-slate-950">
-            {counts.needsResponse}
-          </p>
-        </div>
+      <section
+        aria-label="Schedule summary"
+        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+      >
+        <MetricCard
+          label="Assigned"
+          value={counts.assigned}
+          tone="emerald"
+          icon={<AppIcon name="check" className="h-4 w-4" />}
+          description="Confirmed shifts"
+        />
+        <MetricCard
+          label="Available"
+          value={counts.available}
+          tone="indigo"
+          icon={<AppIcon name="check" className="h-4 w-4" />}
+          description="You can work"
+        />
+        <MetricCard
+          label="Maybe"
+          value={counts.maybe}
+          tone="amber"
+          icon={<AppIcon name="clock" className="h-4 w-4" />}
+          description="Possible, not confirmed"
+        />
+        <MetricCard
+          label="Needs Response"
+          value={counts.needsResponse}
+          tone="slate"
+          icon={<AppIcon name="calendar" className="h-4 w-4" />}
+          description="Awaiting your reply"
+        />
       </section>
 
-      <section aria-labelledby="month-heading" className="surface-card mt-6 overflow-hidden">
+      <div
+        className={`mt-6 grid items-start gap-5 ${
+          selectedShift ? "xl:grid-cols-[minmax(0,1fr)_24rem]" : ""
+        }`}
+      >
+        <section
+          aria-labelledby="month-heading"
+          className="surface-card min-w-0 overflow-hidden"
+        >
         <div className="border-b border-slate-200 p-4 sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center gap-2">
@@ -589,14 +599,14 @@ export function CalendarView({
               </div>
             ))}
           </div>
-          <div role="grid" aria-label={formatMonth(visibleMonth.year, visibleMonth.month)} className="grid grid-cols-7 bg-slate-200 gap-px">
+          <div role="grid" aria-label={formatMonth(visibleMonth.year, visibleMonth.month)} className="grid grid-cols-7 gap-px bg-slate-200">
             {cells.map((day, index) => {
               if (day === null) {
                 return (
                   <div
                     key={`empty-${index}`}
                     role="gridcell"
-                    className="min-h-36 bg-slate-50/80"
+                    className="min-h-36 bg-slate-50"
                   />
                 );
               }
@@ -798,10 +808,26 @@ export function CalendarView({
             })
           )}
         </div>
-      </section>
+        </section>
+
+        {selectedShift ? (
+          <aside
+            aria-label="Selected shift details"
+            className="sticky top-24 hidden xl:block"
+          >
+            <ShiftDetails
+              key={selectedShift.id}
+              shift={selectedShift}
+              requestTimestamp={requestTimestamp}
+              isAdmin={isAdmin}
+              onClose={() => setSelectedShiftId(null)}
+            />
+          </aside>
+        ) : null}
+      </div>
 
       {selectedShift ? (
-        <div className="pointer-events-none fixed inset-0 z-50">
+        <div className="pointer-events-none fixed inset-0 z-50 xl:hidden">
           <button
             type="button"
             aria-label="Close shift details"
@@ -812,7 +838,7 @@ export function CalendarView({
             role="region"
             aria-live="polite"
             aria-label={`Selected shift: ${selectedShift.eventName}`}
-            className="pointer-events-auto absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-slate-50 p-3 shadow-2xl md:inset-x-auto md:bottom-6 md:right-6 md:top-24 md:w-[30rem] md:max-w-[calc(100vw-3rem)] md:rounded-2xl md:p-0"
+            className="pointer-events-auto absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-2xl bg-slate-50 p-3 shadow-2xl md:inset-x-auto md:bottom-6 md:right-6 md:top-24 md:w-[30rem] md:max-w-[calc(100vw-3rem)] md:rounded-xl md:p-0"
           >
             <ShiftDetails
               key={selectedShift.id}

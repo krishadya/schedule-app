@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { AppIcon } from "@/components/ui/app-icon";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   saveAvailability,
@@ -25,10 +26,11 @@ type AvailabilityFormProps = {
 const responseOptions: Array<{
   value: AvailabilityResponse;
   label: string;
+  description: string;
 }> = [
-  { value: "yes", label: "Yes" },
-  { value: "maybe", label: "Maybe" },
-  { value: "no", label: "No" },
+  { value: "yes", label: "Yes", description: "I can work" },
+  { value: "maybe", label: "Maybe", description: "With limits" },
+  { value: "no", label: "No", description: "Unavailable" },
 ];
 
 const initialState: AvailabilityActionState = {
@@ -172,11 +174,11 @@ export function AvailabilityForm({
 
       <fieldset disabled={isPending} className="mt-3">
         <legend className="sr-only">Choose your availability</legend>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid gap-2 sm:grid-cols-3">
           {responseOptions.map((option) => (
             <label
               key={option.value}
-              className={`cursor-pointer rounded-lg border px-3 py-2.5 text-center text-sm font-semibold transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-indigo-600 ${responseOptionClasses(option.value, selectedResponse)}`}
+              className={`cursor-pointer rounded-lg border px-3 py-3 text-left text-sm transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-indigo-600 ${responseOptionClasses(option.value, selectedResponse)}`}
             >
               <input
                 type="radio"
@@ -186,7 +188,15 @@ export function AvailabilityForm({
                 onChange={() => setSelectedResponse(option.value)}
                 className="sr-only"
               />
-              {option.label}
+              <span className="flex items-center justify-between gap-2 font-semibold">
+                {option.label}
+                {selectedResponse === option.value ? (
+                  <AppIcon name="check" className="h-4 w-4" />
+                ) : null}
+              </span>
+              <span className="mt-0.5 block text-xs font-normal opacity-75">
+                {option.description}
+              </span>
             </label>
           ))}
         </div>

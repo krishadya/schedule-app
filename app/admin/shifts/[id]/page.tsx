@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { AppIcon } from "@/components/ui/app-icon";
+import { MetricCard } from "@/components/ui/metric-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -386,6 +387,21 @@ export default async function AdminShiftDetailsPage({
                     </dd>
                   </div>
                 </dl>
+                <div
+                  role="progressbar"
+                  aria-label={`${role.role} staffing progress`}
+                  aria-valuemin={0}
+                  aria-valuemax={role.staffNeeded}
+                  aria-valuenow={Math.min(role.assignedCount, role.staffNeeded)}
+                  className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100"
+                >
+                  <div
+                    className="h-full rounded-full bg-indigo-500"
+                    style={{
+                      width: `${Math.min(100, (role.assignedCount / role.staffNeeded) * 100)}%`,
+                    }}
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -406,25 +422,21 @@ export default async function AdminShiftDetailsPage({
             </p>
           </div>
 
-          <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div
+            aria-label="Availability response summary"
+            className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4"
+          >
             {(
               ["yes", "maybe", "no", "no_response"] as AvailabilityStatus[]
             ).map((status) => (
-              <div
+              <MetricCard
                 key={status}
-                className="surface-card p-3"
-              >
-                <dt>
-                  <StatusBadge tone={getStatusTone(status)}>
-                    {getStatusLabel(status)}
-                  </StatusBadge>
-                </dt>
-                <dd className="mt-1 text-2xl font-semibold text-slate-900">
-                  {counts[status]}
-                </dd>
-              </div>
+                label={getStatusLabel(status)}
+                value={counts[status]}
+                tone={getStatusTone(status)}
+              />
             ))}
-          </dl>
+          </div>
 
           {staff.length === 0 ? (
             <div className="empty-state mt-4 p-8">

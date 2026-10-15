@@ -4,8 +4,10 @@ type IconName =
   | "calendar"
   | "check"
   | "clock"
+  | "home"
   | "key"
   | "location"
+  | "logout"
   | "plus"
   | "schedule"
   | "shield"
@@ -39,6 +41,12 @@ export function AppIcon({
         <path d="M12 7v5l3 2" />
       </>
     ),
+    home: (
+      <>
+        <path d="m3 11 9-8 9 8" />
+        <path d="M5 10v10h14V10M9 20v-6h6v6" />
+      </>
+    ),
     key: (
       <>
         <circle cx="8" cy="15" r="4" />
@@ -49,6 +57,12 @@ export function AppIcon({
       <>
         <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
         <circle cx="12" cy="10" r="2.5" />
+      </>
+    ),
+    logout: (
+      <>
+        <path d="M10 17l5-5-5-5M15 12H3" />
+        <path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" />
       </>
     ),
     plus: <path d="M12 5v14M5 12h14" />,

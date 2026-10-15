@@ -20,8 +20,8 @@ export default async function EditShiftPage({ params }: { params: Promise<{ id: 
 
   return (
     <main className="page-shell">
-      <div className="mx-auto max-w-3xl">
-        <header className="mb-7">
+      <div className="mx-auto max-w-4xl">
+        <header className="page-header">
           <p className="page-eyebrow">Shift management</p>
           <h1 className="page-title">Edit Shift</h1>
           <p className="page-description">
@@ -29,21 +29,19 @@ export default async function EditShiftPage({ params }: { params: Promise<{ id: 
             their assignments.
           </p>
         </header>
-        <div className="surface-card p-5 sm:p-8">
-          <ShiftForm
-            action={editShift.bind(null, shift.id, shift.updated_at)}
-            cancelHref={`/admin/shifts/${shift.id}`}
-            initialValues={{
-              eventName: shift.event_name, date: shift.date,
-              startTime: shift.start_time, endTime: shift.end_time,
-              location: shift.location ?? "", notes: shift.notes ?? "",
-              responseDeadline: shift.response_deadline,
-              requirements: shift.shift_requirements.map((row) => ({
-                id: row.id, role: row.role, count: row.staff_needed,
-              })),
-            }}
-          />
-        </div>
+        <ShiftForm
+          action={editShift.bind(null, shift.id, shift.updated_at)}
+          cancelHref={`/admin/shifts/${shift.id}`}
+          initialValues={{
+            eventName: shift.event_name, date: shift.date,
+            startTime: shift.start_time, endTime: shift.end_time,
+            location: shift.location ?? "", notes: shift.notes ?? "",
+            responseDeadline: shift.response_deadline,
+            requirements: shift.shift_requirements.map((row) => ({
+              id: row.id, role: row.role, count: row.staff_needed,
+            })),
+          }}
+        />
       </div>
     </main>
   );

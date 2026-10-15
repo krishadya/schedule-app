@@ -8,7 +8,7 @@ export function DeleteShiftControl({ shiftId, eventName }: { shiftId: string; ev
   const [state, action, pending] = useActionState(deleteShift.bind(null, shiftId), { error: null });
 
   return (
-    <section className="mt-8 rounded-2xl border border-rose-200 bg-rose-50/50 p-5 sm:p-6">
+    <section className="mt-8 rounded-xl border border-rose-200 bg-rose-50/50 p-5 sm:p-6">
       <h2 className="font-semibold text-rose-950">Delete Shift</h2>
       <p className="mt-1 text-sm text-rose-800/80">
         Permanently remove this shift and its related records.

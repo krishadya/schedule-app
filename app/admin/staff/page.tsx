@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 
 import { AppIcon } from "@/components/ui/app-icon";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
+import { getAvatarUrl } from "@/lib/profile/avatar";
 import { createClient } from "@/lib/supabase/server";
 import { CreateStaffForm } from "./create-staff-form";
 import { ResetPasswordControl } from "./reset-password-control";
@@ -18,7 +20,7 @@ export default async function AdminStaffPage() {
   const supabase = await createClient();
   const { data: staff, error } = await supabase
     .from("profiles")
-    .select("id, full_name, username, role")
+    .select("*")
     .eq("role", "staff")
     .order("full_name", { ascending: true })
     .order("username", { ascending: true });
@@ -74,21 +76,32 @@ export default async function AdminStaffPage() {
                 </p>
               </div>
             ) : (
-              <ul className="mt-4 space-y-3">
+              <ul className="surface-card mt-4 divide-y divide-slate-200 overflow-hidden">
                 {staff.map((staffMember) => (
                   <li
                     key={staffMember.id}
-                    className="surface-card flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between"
+                    className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"
                   >
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-900">
-                        {staffMember.full_name}
-                      </p>
-                      <p className="break-all text-sm text-slate-500">
-                        @{staffMember.username}
-                      </p>
-                      <div className="mt-2">
-                        <StatusBadge>Staff</StatusBadge>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <UserAvatar
+                        name={staffMember.full_name}
+                        src={getAvatarUrl(
+                          typeof staffMember.avatar_path === "string"
+                            ? staffMember.avatar_path
+                            : null,
+                        )}
+                        size="sm"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-slate-900">
+                            {staffMember.full_name}
+                          </p>
+                          <StatusBadge>Staff</StatusBadge>
+                        </div>
+                        <p className="break-all text-sm text-slate-500">
+                          @{staffMember.username}
+                        </p>
                       </div>
                     </div>
                     {staffMember.role === "staff" ? (

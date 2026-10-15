@@ -137,8 +137,12 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
         </div>
       )}
 
-      <fieldset disabled={isPending} className="space-y-4">
-        <div>
+      <fieldset disabled={isPending} className="form-section">
+        <legend className="section-title">Event details</legend>
+        <p className="mt-1 text-sm text-slate-600">
+          The information staff will use to recognize and prepare for this shift.
+        </p>
+        <div className="mt-5">
           <label
             htmlFor="eventName"
             className="form-label"
@@ -156,14 +160,16 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      </fieldset>
+
+      <fieldset disabled={isPending} className="form-section">
+        <legend className="section-title">Timing</legend>
+        <p className="mt-1 text-sm text-slate-600">
+          Set the date and the start and end times for this shift.
+        </p>
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
-            <label
-              htmlFor="date"
-              className="form-label"
-            >
-              Date
-            </label>
+            <label htmlFor="date" className="form-label">Date</label>
             <input
               type="date"
               id="date"
@@ -174,37 +180,8 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
               className="form-input"
             />
           </div>
-
           <div>
-            <label
-              htmlFor="responseDeadline"
-              className="form-label"
-            >
-              Response deadline
-            </label>
-            <input
-              type="datetime-local"
-              id="responseDeadline"
-              name="responseDeadline"
-              step={isEditing ? "any" : undefined}
-              value={fields.responseDeadline}
-              onChange={(event) =>
-                updateField("responseDeadline", event.target.value)
-              }
-              required
-              className="form-input"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label
-              htmlFor="startTime"
-              className="form-label"
-            >
-              Start time
-            </label>
+            <label htmlFor="startTime" className="form-label">Start time</label>
             <input
               type="time"
               id="startTime"
@@ -216,14 +193,8 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
               className="form-input"
             />
           </div>
-
           <div>
-            <label
-              htmlFor="endTime"
-              className="form-label"
-            >
-              End time
-            </label>
+            <label htmlFor="endTime" className="form-label">End time</label>
             <input
               type="time"
               id="endTime"
@@ -236,14 +207,15 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
             />
           </div>
         </div>
+      </fieldset>
 
-        <div>
-          <label
-            htmlFor="location"
-            className="form-label"
-          >
-            Location
-          </label>
+      <fieldset disabled={isPending} className="form-section">
+        <legend className="section-title">Location &amp; notes</legend>
+        <p className="mt-1 text-sm text-slate-600">
+          Add practical details that will help staff arrive prepared.
+        </p>
+        <div className="mt-5">
+          <label htmlFor="location" className="form-label">Location</label>
           <input
             type="text"
             id="location"
@@ -253,14 +225,8 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
             className="form-input"
           />
         </div>
-
-        <div>
-          <label
-            htmlFor="notes"
-            className="form-label"
-          >
-            Notes
-          </label>
+        <div className="mt-4">
+          <label htmlFor="notes" className="form-label">Notes</label>
           <textarea
             id="notes"
             name="notes"
@@ -272,21 +238,47 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
         </div>
       </fieldset>
 
-      <fieldset disabled={isPending} className="border-t border-slate-200 pt-7">
-        <h2 className="section-title">
-          Staff Requirements
-        </h2>
+      <fieldset disabled={isPending} className="form-section">
+        <legend className="section-title">Response deadline</legend>
+        <p className="mt-1 text-sm text-slate-600">
+          Choose when staff can no longer update availability.
+        </p>
+        <div className="mt-5 max-w-md">
+          <label htmlFor="responseDeadline" className="form-label">
+            Deadline
+          </label>
+          <input
+            type="datetime-local"
+            id="responseDeadline"
+            name="responseDeadline"
+            step={isEditing ? "any" : undefined}
+            value={fields.responseDeadline}
+            onChange={(event) =>
+              updateField("responseDeadline", event.target.value)
+            }
+            required
+            className="form-input"
+          />
+        </div>
+      </fieldset>
+
+      <fieldset disabled={isPending} className="form-section">
+        <legend className="section-title">Staff requirements</legend>
+        <p className="mt-1 text-sm text-slate-600">
+          Add every role needed and the number of people required.
+        </p>
         <div className="mt-4 space-y-4">
           {requirements.map((req, index) => (
             <div
               key={req.id}
-              className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4"
+              className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[minmax(0,1fr)_9rem_auto] sm:items-end"
             >
-              <div className="min-w-40 flex-1">
-                <label className="form-label">
+              <div className="min-w-0">
+                <label htmlFor={`role-${req.id}`} className="form-label">
                   Role
                 </label>
                 <input
+                  id={`role-${req.id}`}
                   type="text"
                   required
                   placeholder="Technician"
@@ -297,11 +289,12 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
                   className="form-input"
                 />
               </div>
-              <div className="w-32">
-                <label className="form-label">
+              <div>
+                <label htmlFor={`count-${req.id}`} className="form-label">
                   Number needed
                 </label>
                 <input
+                  id={`count-${req.id}`}
                   type="number"
                   min="1"
                   required
@@ -316,9 +309,9 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
                 <button
                   type="button"
                   onClick={() => removeRequirement(req.id)}
-                  className="btn btn-danger-outline mb-[2px]"
+                  className="btn btn-danger-outline w-full sm:mb-[2px] sm:w-auto"
                 >
-                  Remove
+                  Remove Role
                 </button>
               )}
             </div>
@@ -331,11 +324,11 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
           className="btn btn-secondary mt-4"
         >
           <AppIcon name="plus" className="h-4 w-4" />
-          Add another role
+          Add Role
         </button>
       </fieldset>
 
-      <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-end">
+      <div className="sticky bottom-3 flex flex-col-reverse gap-3 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg shadow-slate-900/5 backdrop-blur sm:flex-row sm:items-center sm:justify-end">
         <Link
           href={cancelHref}
           className="btn btn-ghost w-full sm:w-auto"

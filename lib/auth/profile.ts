@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { getAvatarUrl } from "@/lib/profile/avatar";
 import { createClient } from "@/lib/supabase/server";
 
 export type ProfileRole = "admin" | "staff";
@@ -9,6 +10,8 @@ export type AuthenticatedProfile = {
   full_name: string;
   username: string;
   role: ProfileRole;
+  avatar_path: string | null;
+  avatar_url: string | null;
 };
 
 export async function getAuthenticatedProfile(): Promise<AuthenticatedProfile> {
@@ -21,7 +24,7 @@ export async function getAuthenticatedProfile(): Promise<AuthenticatedProfile> {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, full_name, username, role")
+    .select("*")
     .eq("id", claimsData.claims.sub)
     .single();
 
@@ -36,5 +39,15 @@ export async function getAuthenticatedProfile(): Promise<AuthenticatedProfile> {
     throw new Error("Unable to load the authenticated user profile.");
   }
 
-  return profile;
+  const avatarPath =
+    typeof profile.avatar_path === "string" ? profile.avatar_path : null;
+
+  return {
+    id: profile.id,
+    full_name: profile.full_name,
+    username: profile.username,
+    role: profile.role,
+    avatar_path: avatarPath,
+    avatar_url: getAvatarUrl(avatarPath),
+  };
 }

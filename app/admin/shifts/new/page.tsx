@@ -35,17 +35,15 @@ export default async function NewShiftPage({
 
   return (
     <main className="page-shell">
-      <div className="mx-auto max-w-3xl">
-        <header className="mb-7">
+      <div className="mx-auto max-w-4xl">
+        <header className="page-header">
           <p className="page-eyebrow">Shift management</p>
           <h1 className="page-title">Create Shift</h1>
           <p className="page-description">
             Add event details, response timing, and staffing requirements.
           </p>
         </header>
-        <div className="surface-card p-5 sm:p-8">
-          <CreateShiftForm initialDate={initialDate} />
-        </div>
+        <CreateShiftForm initialDate={initialDate} />
       </div>
     </main>
   );

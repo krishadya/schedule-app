@@ -5,13 +5,20 @@ Staff availability and event scheduling built with Next.js, TypeScript, and Tail
 ## Supabase Setup
 
 1. Create a project in Supabase.
-2. In the Supabase project settings, copy the Project URL and anon/public key.
+2. In the Supabase project settings, copy the Project URL, anon/public key, and
+   service-role key.
 3. Copy `.env.example` to `.env.local`.
 4. Replace the placeholder values in `.env.local` with the Project URL and anon/public key.
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-The `.env.local` file is ignored by Git and must not be committed.
+The service-role key is server-only. Never prefix it with `NEXT_PUBLIC_` or use
+it in a Client Component. The `.env.local` file is ignored by Git and must not
+be committed.
+
+Apply the migrations in `supabase/migrations/` before running features that
+depend on profile customization or avatar storage.

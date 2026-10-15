@@ -13,10 +13,11 @@ export default async function AuthenticatedLayout({
   const profile = await getAuthenticatedProfile();
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <AuthenticatedHeader role={profile.role} />
-      {/* The shell owns viewport height, including the shared header. */}
-      <div className="flex-1 [&>main]:min-h-0">{children}</div>
+    <div className="min-h-screen lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <AuthenticatedHeader profile={profile} />
+      <div className="min-w-0 pb-20 lg:col-start-2 lg:row-start-1 lg:pb-0">
+        {children}
+      </div>
     </div>
   );
 }
