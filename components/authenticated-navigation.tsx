@@ -7,9 +7,6 @@ import type { ProfileRole } from "@/lib/auth/profile";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/calendar", label: "Calendar" },
-  { href: "/shifts", label: "Available Shifts" },
-  { href: "/schedule", label: "My Schedule" },
   { href: "/account", label: "My Account" },
 ];
 
@@ -17,7 +14,7 @@ export function AuthenticatedNavigation({ role }: { role: ProfileRole }) {
   const pathname = usePathname();
   const items =
     role === "admin"
-      ? [...navigation, { href: "/admin", label: "Admin" }]
+      ? [navigation[0], { href: "/admin", label: "Admin" }, navigation[1]]
       : navigation;
 
   return (

@@ -5,22 +5,22 @@ import { getAuthenticatedProfile } from "@/lib/auth/profile";
 
 const adminActions = [
   {
-    href: "/admin/shifts/new",
-    title: "Create Shift",
-    description: "Add an event, shift times, and staffing requirements.",
-    icon: "plus" as const,
-  },
-  {
-    href: "/admin/shifts",
-    title: "View Shifts",
-    description: "Review staff availability and manage shift assignments.",
-    icon: "calendar" as const,
-  },
-  {
     href: "/admin/staff",
     title: "Manage Staff",
     description: "View staff profiles and create staff accounts.",
     icon: "users" as const,
+  },
+  {
+    href: "/admin/shifts",
+    title: "View All Shifts",
+    description: "Review every shift, staff response, and assignment.",
+    icon: "calendar" as const,
+  },
+  {
+    href: "/admin/shifts/new",
+    title: "Create Shift",
+    description: "Create a shift directly when a calendar date is not selected.",
+    icon: "plus" as const,
   },
 ];
 
@@ -39,7 +39,8 @@ export default async function AdminPage() {
             <p className="page-eyebrow">Administration</p>
             <h1 className="page-title">Admin Dashboard</h1>
             <p className="page-description">
-              Create and manage shifts, staffing, and staff accounts.
+              Manage staff and access supporting shift administration. Use the
+              Dashboard calendar for day-to-day scheduling.
             </p>
           </div>
         </header>

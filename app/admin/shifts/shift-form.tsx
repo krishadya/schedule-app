@@ -11,6 +11,10 @@ type StaffRequirement = {
   count: number;
 };
 
+type EditableStaffRequirement = Omit<StaffRequirement, "count"> & {
+  count: string;
+};
+
 const initialState: ActionState = { error: null };
 
 export type ShiftFormValues = {
@@ -24,14 +28,46 @@ export type ShiftFormValues = {
   requirements: StaffRequirement[];
 };
 
-export function ShiftForm({ action, initialValues, cancelHref = "/admin/shifts" }: {
+type EditableShiftFields = Omit<ShiftFormValues, "requirements">;
+
+function formatDeadlineForInput(value: string) {
+  const deadline = new Date(value);
+
+  if (Number.isNaN(deadline.getTime())) {
+    return value;
+  }
+
+  const localDeadline = new Date(
+    deadline.getTime() - deadline.getTimezoneOffset() * 60_000,
+  );
+
+  return localDeadline.toISOString().slice(0, 19);
+}
+
+export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/admin/shifts" }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   initialValues?: ShiftFormValues;
+  initialDate?: string;
   cancelHref?: string;
 }) {
   const isEditing = !!initialValues;
-  const [requirements, setRequirements] = useState<StaffRequirement[]>(
-    () => initialValues?.requirements ?? [{ id: crypto.randomUUID(), role: "", count: 1 }],
+  const [fields, setFields] = useState<EditableShiftFields>(() => ({
+    eventName: initialValues?.eventName ?? "",
+    date: initialValues?.date ?? initialDate ?? "",
+    startTime: initialValues?.startTime ?? "",
+    endTime: initialValues?.endTime ?? "",
+    location: initialValues?.location ?? "",
+    responseDeadline: initialValues
+      ? formatDeadlineForInput(initialValues.responseDeadline)
+      : "",
+    notes: initialValues?.notes ?? "",
+  }));
+  const [requirements, setRequirements] = useState<EditableStaffRequirement[]>(
+    () =>
+      initialValues?.requirements.map((requirement) => ({
+        ...requirement,
+        count: String(requirement.count),
+      })) ?? [{ id: "initial-requirement", role: "", count: "1" }],
   );
   const [state, formAction, isPending] = useActionState(
     async (previousState: ActionState, formData: FormData) => {
@@ -53,7 +89,7 @@ export function ShiftForm({ action, initialValues, cancelHref = "/admin/shifts" 
   const addRequirement = () => {
     setRequirements([
       ...requirements,
-      { id: crypto.randomUUID(), role: "", count: 1 },
+      { id: crypto.randomUUID(), role: "", count: "1" },
     ]);
   };
 
@@ -63,8 +99,8 @@ export function ShiftForm({ action, initialValues, cancelHref = "/admin/shifts" 
 
   const updateRequirement = (
     id: string,
-    field: keyof Omit<StaffRequirement, "id">,
-    value: string | number,
+    field: keyof Omit<EditableStaffRequirement, "id">,
+    value: string,
   ) => {
     setRequirements(
       requirements.map((req) =>
@@ -73,12 +109,24 @@ export function ShiftForm({ action, initialValues, cancelHref = "/admin/shifts" 
     );
   };
 
+  const updateField = (field: keyof EditableShiftFields, value: string) => {
+    setFields((currentFields) => ({
+      ...currentFields,
+      [field]: value,
+    }));
+  };
+
   return (
     <form action={formAction} className="space-y-7">
       <input
         type="hidden"
         name="requirements"
-        value={JSON.stringify(requirements)}
+        value={JSON.stringify(
+          requirements.map((requirement) => ({
+            ...requirement,
+            count: Number(requirement.count),
+          })),
+        )}
       />
 
       {state.error && (
@@ -103,7 +151,8 @@ export function ShiftForm({ action, initialValues, cancelHref = "/admin/shifts" 
             type="text"
             id="eventName"
             name="eventName"
-            defaultValue={initialValues?.eventName}
+            value={fields.eventName}
+            onChange={(event) => updateField("eventName", event.target.value)}
             required
             className="form-input"
           />
@@ -121,7 +170,8 @@ export function ShiftForm({ action, initialValues, cancelHref = "/admin/shifts" 
               type="date"
               id="date"
               name="date"
-              defaultValue={initialValues?.date}
+              value={fields.date}
+              onChange={(event) => updateField("date", event.target.value)}
               required
               className="form-input"
             />
@@ -139,13 +189,10 @@ export function ShiftForm({ action, initialValues, cancelHref = "/admin/shifts" 
               id="responseDeadline"
               name="responseDeadline"
               step={isEditing ? "any" : undefined}
-              ref={(input) => {
-                if (input && initialValues && !input.value) {
-                  const deadline = new Date(initialValues.responseDeadline);
-                  const local = new Date(deadline.getTime() - deadline.getTimezoneOffset() * 60_000);
-                  input.value = local.toISOString().slice(0, -1);
-                }
-              }}
+              value={fields.responseDeadline}
+              onChange={(event) =>
+                updateField("responseDeadline", event.target.value)
+              }
               required
               className="form-input"
             />
@@ -165,7 +212,8 @@ export function ShiftForm({ action, initialValues, cancelHref = "/admin/shifts" 
               id="startTime"
               name="startTime"
               step={isEditing ? "any" : undefined}
-              defaultValue={initialValues?.startTime}
+              value={fields.startTime}
+              onChange={(event) => updateField("startTime", event.target.value)}
               required
               className="form-input"
             />
@@ -183,7 +231,8 @@ export function ShiftForm({ action, initialValues, cancelHref = "/admin/shifts" 
               id="endTime"
               name="endTime"
               step={isEditing ? "any" : undefined}
-              defaultValue={initialValues?.endTime}
+              value={fields.endTime}
+              onChange={(event) => updateField("endTime", event.target.value)}
               required
               className="form-input"
             />
@@ -201,7 +250,8 @@ export function ShiftForm({ action, initialValues, cancelHref = "/admin/shifts" 
             type="text"
             id="location"
             name="location"
-            defaultValue={initialValues?.location}
+            value={fields.location}
+            onChange={(event) => updateField("location", event.target.value)}
             className="form-input"
           />
         </div>
@@ -216,7 +266,8 @@ export function ShiftForm({ action, initialValues, cancelHref = "/admin/shifts" 
           <textarea
             id="notes"
             name="notes"
-            defaultValue={initialValues?.notes}
+            value={fields.notes}
+            onChange={(event) => updateField("notes", event.target.value)}
             rows={3}
             className="form-input"
           />
@@ -258,11 +309,7 @@ export function ShiftForm({ action, initialValues, cancelHref = "/admin/shifts" 
                   required
                   value={req.count}
                   onChange={(e) =>
-                    updateRequirement(
-                      req.id,
-                      "count",
-                      parseInt(e.target.value) || 1,
-                    )
+                    updateRequirement(req.id, "count", e.target.value)
                   }
                   className="form-input"
                 />

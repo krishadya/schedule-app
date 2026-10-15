@@ -56,7 +56,7 @@ export function LoginForm() {
               spellCheck={false}
               pattern="[A-Za-z0-9._-]+"
               title="Use only letters, numbers, underscores, dots, and hyphens."
-              placeholder="username"
+              placeholder="your_username"
               disabled={isPending}
               className="form-input"
             />
@@ -73,6 +73,7 @@ export function LoginForm() {
               id="password"
               name="password"
               type="password"
+              placeholder="********"
               required
               autoComplete="current-password"
               disabled={isPending}

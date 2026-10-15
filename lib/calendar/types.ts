@@ -10,6 +10,7 @@ export type CalendarStatus =
 export type CalendarRequirement = {
   role: string;
   staffNeeded: number;
+  assignedCount: number | null;
 };
 
 export type CalendarAvailability = {
