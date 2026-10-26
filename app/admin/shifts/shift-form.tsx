@@ -2,17 +2,16 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { AppIcon } from "@/components/ui/app-icon";
 import type { ActionState } from "./actions";
+import {
+  StaffRequirementsFieldset,
+  type EditableStaffRequirement,
+} from "./staff-requirements-fieldset";
 
 type StaffRequirement = {
   id: string;
   role: string;
   count: number;
-};
-
-type EditableStaffRequirement = Omit<StaffRequirement, "count"> & {
-  count: string;
 };
 
 const initialState: ActionState = { error: null };
@@ -83,29 +82,6 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
     },
     initialState,
   );
-
-  const addRequirement = () => {
-    setRequirements([
-      ...requirements,
-      { id: crypto.randomUUID(), role: "", count: "1" },
-    ]);
-  };
-
-  const removeRequirement = (id: string) => {
-    setRequirements(requirements.filter((req) => req.id !== id));
-  };
-
-  const updateRequirement = (
-    id: string,
-    field: keyof Omit<EditableStaffRequirement, "id">,
-    value: string,
-  ) => {
-    setRequirements(
-      requirements.map((req) =>
-        req.id === id ? { ...req, [field]: value } : req,
-      ),
-    );
-  };
 
   const updateField = (field: keyof EditableShiftFields, value: string) => {
     setFields((currentFields) => ({
@@ -262,71 +238,12 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
         </div>
       </fieldset>
 
-      <fieldset disabled={isPending} className="form-section">
-        <legend className="section-title">Staff requirements</legend>
-        <p className="mt-1 text-sm text-slate-600">
-          Add every role needed and the number of people required.
-        </p>
-        <div className="mt-4 space-y-4">
-          {requirements.map((req, index) => (
-            <div
-              key={req.id}
-              className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[minmax(0,1fr)_9rem_auto] sm:items-end"
-            >
-              <div className="min-w-0">
-                <label htmlFor={`role-${req.id}`} className="form-label">
-                  Role
-                </label>
-                <input
-                  id={`role-${req.id}`}
-                  type="text"
-                  required
-                  placeholder="Technician"
-                  value={req.role}
-                  onChange={(e) =>
-                    updateRequirement(req.id, "role", e.target.value)
-                  }
-                  className="form-input"
-                />
-              </div>
-              <div>
-                <label htmlFor={`count-${req.id}`} className="form-label">
-                  Number needed
-                </label>
-                <input
-                  id={`count-${req.id}`}
-                  type="number"
-                  min="1"
-                  required
-                  value={req.count}
-                  onChange={(e) =>
-                    updateRequirement(req.id, "count", e.target.value)
-                  }
-                  className="form-input"
-                />
-              </div>
-              {(isEditing ? requirements.length > 1 : index > 0) && (
-                <button
-                  type="button"
-                  onClick={() => removeRequirement(req.id)}
-                  className="btn btn-danger-outline w-full sm:mb-[2px] sm:w-auto"
-                >
-                  Remove Role
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={addRequirement}
-          className="btn btn-secondary mt-4"
-        >
-          <AppIcon name="plus" className="h-4 w-4" />
-          Add Role
-        </button>
-      </fieldset>
+      <StaffRequirementsFieldset
+        requirements={requirements}
+        onChange={setRequirements}
+        disabled={isPending}
+        preserveFirstRequirement={!isEditing}
+      />
 
       <div className="sticky bottom-3 flex flex-col-reverse gap-3 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg shadow-slate-900/5 backdrop-blur sm:flex-row sm:items-center sm:justify-end">
         <Link

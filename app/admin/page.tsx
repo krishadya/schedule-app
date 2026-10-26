@@ -22,6 +22,12 @@ const adminActions = [
     description: "Create a shift directly when a calendar date is not selected.",
     icon: "plus" as const,
   },
+  {
+    href: "/admin/shifts/recurring",
+    title: "Create Recurring Shifts",
+    description: "Enter a repeating schedule across a date range and weekdays.",
+    icon: "schedule" as const,
+  },
 ];
 
 export default async function AdminPage() {

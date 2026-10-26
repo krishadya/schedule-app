@@ -67,13 +67,22 @@ export default async function AdminShiftsPage() {
               Review event staffing, responses, and assignments.
             </p>
           </div>
-          <Link
-            href="/admin/shifts/new"
-            className="btn btn-primary self-start"
-          >
-            <AppIcon name="plus" className="h-4 w-4" />
-            Create Shift
-          </Link>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link
+              href="/admin/shifts/recurring"
+              className="btn btn-secondary"
+            >
+              <AppIcon name="schedule" className="h-4 w-4" />
+              Create Recurring Shifts
+            </Link>
+            <Link
+              href="/admin/shifts/new"
+              className="btn btn-primary"
+            >
+              <AppIcon name="plus" className="h-4 w-4" />
+              Create Shift
+            </Link>
+          </div>
         </header>
 
         {shifts.length === 0 ? (
