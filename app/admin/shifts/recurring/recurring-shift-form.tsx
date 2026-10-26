@@ -1,18 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
+
+import {
+  DEFAULT_REPEAT_DAYS,
+  generateRecurringDates,
+  toggleRepeatDay,
+  validateRecurringShiftDraft,
+  WEEKDAYS,
+  type RecurringShiftPreview as RecurringShiftPreviewData,
+  type Weekday,
+} from "@/lib/shifts/recurrence";
 
 import {
   StaffRequirementsFieldset,
   type EditableStaffRequirement,
 } from "../staff-requirements-fieldset";
-import {
-  DEFAULT_REPEAT_DAYS,
-  toggleRepeatDay,
-  WEEKDAYS,
-  type Weekday,
-} from "./recurring-form-state";
+import { RecurringShiftPreview } from "./recurring-shift-preview";
 
 type RecurringShiftFields = {
   eventName: string;
@@ -36,6 +41,11 @@ const initialFields: RecurringShiftFields = {
   responseDeadline: "",
 };
 
+type PreviewFeedback = {
+  tone: "error" | "info";
+  message: string;
+};
+
 export function RecurringShiftForm() {
   const [fields, setFields] = useState(initialFields);
   const [selectedDays, setSelectedDays] = useState<Weekday[]>(
@@ -44,15 +54,78 @@ export function RecurringShiftForm() {
   const [requirements, setRequirements] = useState<
     EditableStaffRequirement[]
   >([{ id: "initial-recurring-requirement", role: "", count: "1" }]);
+  const [preview, setPreview] = useState<RecurringShiftPreviewData | null>(
+    null,
+  );
+  const [feedback, setFeedback] = useState<PreviewFeedback | null>(null);
+
+  const invalidatePreview = () => {
+    setPreview(null);
+    setFeedback(null);
+  };
 
   const updateField = (
     field: keyof RecurringShiftFields,
     value: string,
   ) => {
+    invalidatePreview();
     setFields((currentFields) => ({
       ...currentFields,
       [field]: value,
     }));
+  };
+
+  const toggleSelectedDay = (day: Weekday) => {
+    invalidatePreview();
+    setSelectedDays((currentDays) => toggleRepeatDay(currentDays, day));
+  };
+
+  const updateRequirements = (
+    nextRequirements: EditableStaffRequirement[],
+  ) => {
+    invalidatePreview();
+    setRequirements(nextRequirements);
+  };
+
+  const previewShifts = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const validation = validateRecurringShiftDraft({
+      ...fields,
+      selectedDays,
+      requirements,
+    });
+
+    if (!validation.success) {
+      setPreview(null);
+      setFeedback({ tone: "error", message: validation.error });
+      return;
+    }
+
+    const generation = generateRecurringDates(
+      validation.data.startDate,
+      validation.data.endDate,
+      validation.data.selectedDays,
+    );
+
+    if (!generation.success) {
+      setPreview(null);
+      setFeedback({ tone: "error", message: generation.error });
+      return;
+    }
+
+    if (generation.dates.length === 0) {
+      setPreview(null);
+      setFeedback({
+        tone: "info",
+        message:
+          "No shifts match the selected weekdays within this date range.",
+      });
+      return;
+    }
+
+    setFeedback(null);
+    setPreview({ ...validation.data, dates: generation.dates });
   };
 
   const dateRangeError =
@@ -69,10 +142,8 @@ export function RecurringShiftForm() {
       : null;
 
   return (
-    <form
-      className="space-y-7"
-      onSubmit={(event) => event.preventDefault()}
-    >
+    <>
+      <form className="space-y-7" noValidate onSubmit={previewShifts}>
       <fieldset className="form-section">
         <legend className="section-title">Event Details</legend>
         <p className="mt-1 text-sm text-slate-600">
@@ -164,11 +235,7 @@ export function RecurringShiftForm() {
                   key={weekday.value}
                   type="button"
                   aria-pressed={isSelected}
-                  onClick={() =>
-                    setSelectedDays((currentDays) =>
-                      toggleRepeatDay(currentDays, weekday.value),
-                    )
-                  }
+                  onClick={() => toggleSelectedDay(weekday.value)}
                   className={`min-h-11 rounded-lg border px-3 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ${
                     isSelected
                       ? "border-indigo-600 bg-indigo-600 text-white shadow-sm"
@@ -259,7 +326,7 @@ export function RecurringShiftForm() {
 
       <StaffRequirementsFieldset
         requirements={requirements}
-        onChange={setRequirements}
+        onChange={updateRequirements}
       />
 
       <fieldset className="form-section">
@@ -299,28 +366,46 @@ export function RecurringShiftForm() {
         </div>
       </fieldset>
 
-      <div className="sticky bottom-3 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg shadow-slate-900/5 backdrop-blur">
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Link href="/admin/shifts" className="btn btn-ghost w-full sm:w-auto">
-            Cancel
-          </Link>
-          <button
-            type="button"
-            disabled
-            aria-describedby="recurring-preview-note"
-            className="btn btn-primary w-full sm:w-auto"
+        {feedback ? (
+          <div
+            role={feedback.tone === "error" ? "alert" : "status"}
+            aria-live="polite"
+            className={
+              feedback.tone === "error"
+                ? "alert-error"
+                : "rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm leading-5 text-indigo-800"
+            }
           >
-            Preview Recurring Shifts
-          </button>
+            {feedback.message}
+          </div>
+        ) : null}
+
+        <div className="sticky bottom-3 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg shadow-slate-900/5 backdrop-blur">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Link
+              href="/admin/shifts"
+              className="btn btn-ghost w-full sm:w-auto"
+            >
+              Cancel
+            </Link>
+            <button
+              type="submit"
+              aria-describedby="recurring-preview-note"
+              className="btn btn-primary w-full sm:w-auto"
+            >
+              Preview Shifts
+            </button>
+          </div>
+          <p
+            id="recurring-preview-note"
+            className="mt-2 text-center text-xs text-slate-500 sm:text-right"
+          >
+            Preview only. No shifts will be saved.
+          </p>
         </div>
-        <p
-          id="recurring-preview-note"
-          className="mt-2 text-center text-xs text-slate-500 sm:text-right"
-        >
-          Preview and saving are coming in the next milestone. Nothing will be
-          saved from this form yet.
-        </p>
-      </div>
-    </form>
+      </form>
+
+      {preview ? <RecurringShiftPreview preview={preview} /> : null}
+    </>
   );
 }

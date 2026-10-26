@@ -1,4 +1,4 @@
-type ShiftRequirement = {
+export type ShiftRequirement = {
   role: string;
   staffNeeded: number;
 };
@@ -12,7 +12,7 @@ function getTextValue(formData: FormData, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function isValidDate(value: string) {
+export function isValidDate(value: string) {
   const match = DATE_PATTERN.exec(value);
 
   if (!match) {
@@ -31,7 +31,7 @@ function isValidDate(value: string) {
   );
 }
 
-function getTimeInSeconds(value: string) {
+export function getTimeInSeconds(value: string) {
   const match = TIME_PATTERN.exec(value);
 
   if (!match) {
@@ -41,7 +41,7 @@ function getTimeInSeconds(value: string) {
   return Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3] ?? 0);
 }
 
-function parseRequirements(rawRequirements: string):
+export function parseRequirements(rawRequirements: string):
   | { success: true; requirements: ShiftRequirement[] }
   | { success: false; error: string } {
   let submittedRequirements: unknown;
