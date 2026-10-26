@@ -43,13 +43,14 @@ function formatDeadlineForInput(value: string) {
   return localDeadline.toISOString().slice(0, 19);
 }
 
-export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/admin/shifts" }: {
+export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/admin/shifts", mode }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   initialValues?: ShiftFormValues;
   initialDate?: string;
   cancelHref?: string;
+  mode?: "create" | "edit";
 }) {
-  const isEditing = !!initialValues;
+  const isEditing = mode ? mode === "edit" : !!initialValues;
   const [fields, setFields] = useState<EditableShiftFields>(() => ({
     eventName: initialValues?.eventName ?? "",
     date: initialValues?.date ?? initialDate ?? "",
@@ -162,7 +163,7 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
               type="time"
               id="startTime"
               name="startTime"
-              step={isEditing ? "any" : undefined}
+              step={initialValues ? "any" : undefined}
               value={fields.startTime}
               onChange={(event) => updateField("startTime", event.target.value)}
               required
@@ -175,7 +176,7 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
               type="time"
               id="endTime"
               name="endTime"
-              step={isEditing ? "any" : undefined}
+              step={initialValues ? "any" : undefined}
               value={fields.endTime}
               onChange={(event) => updateField("endTime", event.target.value)}
               required
@@ -227,7 +228,7 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
             type="datetime-local"
             id="responseDeadline"
             name="responseDeadline"
-            step={isEditing ? "any" : undefined}
+            step={initialValues ? "any" : undefined}
             value={fields.responseDeadline}
             onChange={(event) =>
               updateField("responseDeadline", event.target.value)

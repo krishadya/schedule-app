@@ -1,8 +1,24 @@
 "use client";
 
 import { createShift } from "../actions";
-import { ShiftForm } from "../shift-form";
+import { ShiftForm, type ShiftFormValues } from "../shift-form";
 
-export function CreateShiftForm({ initialDate }: { initialDate?: string }) {
-  return <ShiftForm action={createShift} initialDate={initialDate} />;
+export function CreateShiftForm({
+  initialDate,
+  initialValues,
+  cancelHref,
+}: {
+  initialDate?: string;
+  initialValues?: ShiftFormValues;
+  cancelHref?: string;
+}) {
+  return (
+    <ShiftForm
+      action={createShift}
+      mode="create"
+      initialDate={initialDate}
+      initialValues={initialValues}
+      cancelHref={cancelHref}
+    />
+  );
 }

@@ -279,12 +279,20 @@ export default async function AdminShiftDetailsPage({
           >
             ← Back to Shifts
           </Link>
-          <Link
-            href={`/admin/shifts/${shift.id}/edit`}
-            className="btn btn-secondary"
-          >
-            Edit Shift
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/admin/shifts/new?duplicate=${shift.id}`}
+              className="btn btn-secondary"
+            >
+              Duplicate Shift
+            </Link>
+            <Link
+              href={`/admin/shifts/${shift.id}/edit`}
+              className="btn btn-secondary"
+            >
+              Edit Shift
+            </Link>
+          </div>
         </div>
 
         <section className="surface-card overflow-hidden p-5 sm:p-7">
