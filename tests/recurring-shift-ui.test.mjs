@@ -219,7 +219,7 @@ test("recurring preview validation reuses shift staffing rules", () => {
   );
 });
 
-test("recurring form is local-only and exposes the required controls", () => {
+test("recurring form previews locally and exposes the required controls", () => {
   const form = read(
     "app/admin/shifts/recurring/recurring-shift-form.tsx",
   );
@@ -230,7 +230,7 @@ test("recurring form is local-only and exposes the required controls", () => {
     "app/admin/shifts/recurring/recurring-shift-preview.tsx",
   );
 
-  assert.doesNotMatch(form, /supabase|createClient|useActionState|server action/i);
+  assert.doesNotMatch(form, /supabase|createClient|server action/i);
   assert.match(form, /onSubmit=\{previewShifts\}/);
   assert.match(form, /aria-pressed=\{isSelected\}/);
   assert.equal([...form.matchAll(/type="date"/g)].length, 2);
@@ -240,11 +240,36 @@ test("recurring form is local-only and exposes the required controls", () => {
   assert.match(form, /type="submit"[\s\S]*Preview Shifts/);
   assert.match(form, /invalidatePreview\(\)/);
   assert.match(preview, /Create All Shifts/);
-  assert.match(preview, /disabled/);
-  assert.match(preview, /Bulk saving will be enabled in the next milestone\./);
+  assert.match(preview, /<dialog/);
+  assert.match(preview, /showModal\(\)/);
+  assert.match(preview, /Create \{preview\.dates\.length\}/);
+  assert.match(preview, /disabled=\{isSaving\}/);
+  assert.match(preview, /submissionStarted\.current/);
+  assert.match(preview, /localDateTimeToIso/);
+  assert.match(preview, /createRecurringShifts/);
   assert.match(requirements, /Add Role/);
   assert.match(requirements, /Remove Role/);
   assert.match(requirements, /requirements\.length\s*<=\s*1/);
+});
+
+test("changing recurring inputs invalidates the saveable preview", () => {
+  const form = read(
+    "app/admin/shifts/recurring/recurring-shift-form.tsx",
+  );
+
+  assert.match(
+    form,
+    /const updateField[\s\S]*invalidatePreview\(\)[\s\S]*setFields/,
+  );
+  assert.match(
+    form,
+    /const toggleSelectedDay[\s\S]*invalidatePreview\(\)[\s\S]*setSelectedDays/,
+  );
+  assert.match(
+    form,
+    /const updateRequirements[\s\S]*invalidatePreview\(\)[\s\S]*setRequirements/,
+  );
+  assert.match(form, /\{preview \? <RecurringShiftPreview preview=\{preview\} \/> : null\}/);
 });
 
 test("existing shift form keeps its original action and requirement payload", () => {

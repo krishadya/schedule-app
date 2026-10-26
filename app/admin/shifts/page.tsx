@@ -24,7 +24,11 @@ function formatTime(time: string) {
   return `${twelveHour}:${String(minutes).padStart(2, "0")} ${period}`;
 }
 
-export default async function AdminShiftsPage() {
+export default async function AdminShiftsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ created?: string | string[] }>;
+}) {
   const profile = await getAuthenticatedProfile();
 
   if (profile.role !== "admin") {
@@ -56,6 +60,13 @@ export default async function AdminShiftsPage() {
     throw new Error("Unable to load shifts.");
   }
 
+  const { created } = await searchParams;
+  const createdValue = Array.isArray(created) ? created[0] : created;
+  const createdCount =
+    createdValue && /^\d+$/.test(createdValue)
+      ? Number(createdValue)
+      : null;
+
   return (
     <main className="page-shell">
       <div className="page-container">
@@ -84,6 +95,13 @@ export default async function AdminShiftsPage() {
             </Link>
           </div>
         </header>
+
+        {createdCount !== null && createdCount >= 1 && createdCount <= 120 ? (
+          <p role="status" className="alert-success mb-6" aria-live="polite">
+            {createdCount} {createdCount === 1 ? "shift was" : "shifts were"}{" "}
+            created successfully.
+          </p>
+        ) : null}
 
         {shifts.length === 0 ? (
           <div className="empty-state">

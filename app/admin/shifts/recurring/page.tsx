@@ -19,7 +19,7 @@ export default async function RecurringShiftsPage() {
             <h1 className="page-title">Create Recurring Shifts</h1>
             <p className="page-description">
               Enter the shared details for a shift that repeats across a date
-              range. Preview and saving will be added in the next milestone.
+              range, preview every occurrence, and create them together.
             </p>
           </div>
         </header>
