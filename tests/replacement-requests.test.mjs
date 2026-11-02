@@ -48,12 +48,14 @@ const migration = readFileSync(
 test("missing replacement schema errors are recognised so pages can hide the feature", () => {
   assert.equal(shared.isMissingReplacementSchema({ code: "42P01" }), true);
   assert.equal(shared.isMissingReplacementSchema({ code: "PGRST205" }), true);
+  assert.equal(shared.isMissingReplacementSchema({ code: "PGRST202" }), true);
+  // Other errors that merely mention the table must not hide a real bug.
   assert.equal(
     shared.isMissingReplacementSchema({
-      code: "X",
-      message: "Could not find the table 'public.replacement_requests'",
+      code: "PGRST200",
+      message: "Could not find a relationship between 'replacement_requests' and 'profiles'",
     }),
-    true,
+    false,
   );
   assert.equal(shared.isMissingReplacementSchema({ code: "42501", message: "denied" }), false);
   assert.equal(shared.isMissingReplacementSchema(null), false);

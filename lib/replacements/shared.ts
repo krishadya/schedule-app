@@ -33,12 +33,12 @@ export function isMissingReplacementSchema(
   error: { code?: string | null; message?: string | null } | null,
 ) {
   if (!error) return false;
+  // Match only "does not exist" errors, so a real query bug still surfaces.
   return (
     error.code === "42P01" ||
     error.code === "42883" ||
     error.code === "PGRST202" ||
-    error.code === "PGRST205" ||
-    /replacement_requests|resolve_replacement_request/.test(error.message ?? "")
+    error.code === "PGRST205"
   );
 }
 
