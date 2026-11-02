@@ -33,6 +33,14 @@ export type StaffNotificationInput = {
     assigned_role: string;
     assigned_at: string | null;
   }>;
+  resolvedReplacements?: Array<{
+    id: string;
+    status: string;
+    admin_note: string | null;
+    resolved_at: string | null;
+    event_name: string;
+    date: string;
+  }>;
 };
 
 export type AdminNotificationInput = {
@@ -51,6 +59,15 @@ export type AdminNotificationInput = {
       response: string;
       updated_at: string | null;
     }> | null;
+  }>;
+  pendingReplacements?: Array<{
+    id: string;
+    shift_id: string;
+    requester_name: string;
+    reason: string | null;
+    event_name: string;
+    date: string;
+    start_time: string;
   }>;
 };
 
@@ -185,6 +202,31 @@ export function buildStaffNotifications(
     }
   }
 
+  for (const request of input.resolvedReplacements ?? []) {
+    if (
+      (request.status !== "approved" && request.status !== "declined") ||
+      !isWithinDays(request.resolved_at, now, RECENT_ASSIGNMENT_DAYS)
+    ) {
+      continue;
+    }
+
+    const approved = request.status === "approved";
+    const note = request.admin_note ? ` · “${request.admin_note}”` : "";
+    items.push({
+      id: `replacement:${request.id}`,
+      title: approved
+        ? `Replacement approved for ${request.event_name}`
+        : `Replacement declined for ${request.event_name}`,
+      detail: approved
+        ? `${formatShiftDate(request.date)} · You're no longer on this shift${note}`
+        : `${formatShiftDate(request.date)} · You're still assigned${note}`,
+      href: "/schedule",
+      tone: approved ? "emerald" : "slate",
+      actionable: false,
+      order: `2:${request.resolved_at}`,
+    });
+  }
+
   return items
     .sort((first, second) => first.order.localeCompare(second.order))
     .map(stripOrder);
@@ -196,6 +238,24 @@ export function buildAdminNotifications(
   const { now, todayKey } = input;
   const soonLimit = addDays(todayKey, STARTING_SOON_DAYS - 1);
   const items: Array<NotificationItem & { order: string }> = [];
+
+  for (const request of input.pendingReplacements ?? []) {
+    if (request.date < todayKey) {
+      continue;
+    }
+
+    items.push({
+      id: `replacement:${request.id}`,
+      title: `${request.requester_name} needs a replacement`,
+      detail: `${request.event_name} · ${formatShiftDate(request.date)} at ${formatTime(request.start_time)}${
+        request.reason ? ` · “${request.reason}”` : ""
+      }`,
+      href: `/admin/shifts/${request.shift_id}`,
+      tone: "amber",
+      actionable: true,
+      order: `0:${request.date}:${request.start_time}:a`,
+    });
+  }
 
   for (const shift of input.shifts) {
     if (shift.date < todayKey) {

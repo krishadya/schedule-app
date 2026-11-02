@@ -11,7 +11,14 @@ import {
   getWeekStart,
   getWeeklyMinutes,
 } from "@/lib/shifts/hours";
+import {
+  REPLACEMENT_COLUMNS,
+  isMissingReplacementSchema,
+  latestRequestByShift,
+  type ReplacementRequest,
+} from "@/lib/replacements/shared";
 import { createClient } from "@/lib/supabase/server";
+import { ReplacementControl } from "./replacement-control";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   weekday: "long",
@@ -98,6 +105,31 @@ export default async function SchedulePage() {
     today,
   );
   schedule = schedule.filter((assignment) => assignment.shift.date >= today);
+
+  // Replacement requests are optional: if the table hasn't been created yet
+  // the control is hidden instead of breaking the page.
+  let replacementsEnabled = false;
+  let latestRequests = new Map<string, ReplacementRequest>();
+
+  if (schedule.length > 0) {
+    const { data: requests, error: requestsError } = await supabase
+      .from("replacement_requests")
+      .select(REPLACEMENT_COLUMNS)
+      .eq("requested_by", profile.id)
+      .in(
+        "shift_id",
+        schedule.map((assignment) => assignment.shift.id),
+      );
+
+    if (requestsError && !isMissingReplacementSchema(requestsError)) {
+      throw new Error("Unable to load your replacement requests.");
+    }
+
+    replacementsEnabled = !requestsError;
+    latestRequests = latestRequestByShift(
+      (requests ?? []) as ReplacementRequest[],
+    );
+  }
 
   schedule.sort((first, second) => {
     const dateDifference = first.shift.date.localeCompare(second.shift.date);
@@ -223,6 +255,15 @@ export default async function SchedulePage() {
                       {assignment.shift.notes}
                     </p>
                   </div>
+                ) : null}
+
+                {replacementsEnabled ? (
+                  <ReplacementControl
+                    shiftId={assignment.shift.id}
+                    latestRequest={
+                      latestRequests.get(assignment.shift.id) ?? null
+                    }
+                  />
                 ) : null}
               </article>
             ))}

@@ -15,8 +15,14 @@ import {
   getShiftMinutes,
   getWeekStart,
 } from "@/lib/shifts/hours";
+import {
+  REPLACEMENT_COLUMNS,
+  isMissingReplacementSchema,
+  type ReplacementRequest,
+} from "@/lib/replacements/shared";
 import { createClient } from "@/lib/supabase/server";
 import { DeleteShiftControl } from "./delete-shift-control";
+import { ReplacementReview } from "./replacement-review";
 import {
   StaffAssignmentControl,
   type AssignmentRoleOption,
@@ -38,6 +44,7 @@ type StaffAvailability = {
   assignedRole: string | null;
   conflicts: ConflictingShift[];
   weekMinutes: number;
+  pendingReplacement: ReplacementRequest | null;
 };
 
 const UUID_PATTERN =
@@ -179,8 +186,13 @@ export default async function AdminShiftDetailsPage({
   }
 
   const weekStart = getWeekStart(shift.date);
-  const [profilesResult, responsesResult, assignmentsResult, weekShiftsResult] =
-    await Promise.all([
+  const [
+    profilesResult,
+    responsesResult,
+    assignmentsResult,
+    weekShiftsResult,
+    replacementsResult,
+  ] = await Promise.all([
       supabase
         .from("profiles")
         .select("id, full_name, username")
@@ -204,6 +216,11 @@ export default async function AdminShiftDetailsPage({
         )
         .gte("date", weekStart)
         .lte("date", addDays(weekStart, 6)),
+      supabase
+        .from("replacement_requests")
+        .select(REPLACEMENT_COLUMNS)
+        .eq("shift_id", shift.id)
+        .eq("status", "pending"),
     ]);
 
   if (profilesResult.error) {
@@ -221,6 +238,21 @@ export default async function AdminShiftDetailsPage({
   if (weekShiftsResult.error) {
     throw new Error("Unable to check for scheduling conflicts.");
   }
+
+  // Replacement requests are optional until their migration has been run.
+  if (
+    replacementsResult.error &&
+    !isMissingReplacementSchema(replacementsResult.error)
+  ) {
+    throw new Error("Unable to load replacement requests.");
+  }
+
+  const pendingReplacementByUser = new Map(
+    ((replacementsResult.data ?? []) as ReplacementRequest[]).map((request) => [
+      request.requested_by,
+      request,
+    ]),
+  );
 
   const conflictsByUser = findAssignmentConflicts(
     shift,
@@ -288,6 +320,9 @@ export default async function AdminShiftDetailsPage({
       assignedRole: assignment?.assigned_role ?? null,
       conflicts: conflictsByUser.get(profile.id) ?? [],
       weekMinutes: weekMinutesByUser.get(profile.id) ?? 0,
+      pendingReplacement: assignment
+        ? (pendingReplacementByUser.get(profile.id) ?? null)
+        : null,
     };
   });
 
@@ -590,6 +625,14 @@ export default async function AdminShiftDetailsPage({
                         <span className="font-medium">Note:</span>{" "}
                         {member.response.note}
                       </p>
+                    ) : null}
+
+                    {member.pendingReplacement ? (
+                      <ReplacementReview
+                        requestId={member.pendingReplacement.id}
+                        shiftId={shift.id}
+                        reason={member.pendingReplacement.reason}
+                      />
                     ) : null}
 
                     <StaffAssignmentControl

@@ -24,6 +24,8 @@ Each installation is fully independent and serves one organization.
 - Scheduled hours are shown per person for this week and next.
 - Notifications flag shifts that still need staff after responses close or
   shortly before they start.
+- Review replacement requests. Approving removes that person's assignment
+  so the slot can be filled again.
 - Create staff accounts and reset passwords.
 
 **For staff**
@@ -31,6 +33,7 @@ Each installation is fully independent and serves one organization.
 - Respond Yes, Maybe, or No to upcoming shifts, with optional notes and
   alternate times.
 - See confirmed shifts on a calendar and in My Schedule, with weekly hours.
+- Ask for a replacement when they can't make an assigned shift.
 - Notifications for shifts awaiting a response, new assignments, and
   reminders for today and tomorrow.
 - Change name, username, password, and profile picture.
@@ -66,6 +69,7 @@ Open **SQL Editor** in the Supabase dashboard and run each file in
    `avatars` storage bucket
 4. `20261026170000_create_recurring_shifts_rpc.sql`: atomic recurring shift
    creation
+5. `20261101120000_replacement_requests.sql`: shift replacement requests
 
 ### 3. Configure environment variables
 
