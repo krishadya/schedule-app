@@ -123,6 +123,27 @@ Internally each username maps to a placeholder email `username@schedule.local`
 in Supabase Auth. These addresses never receive mail. That's why
 notifications are in-app.
 
+### 6. Try it with demo data (optional)
+
+To explore the app without real people, create a **separate, empty** Supabase
+project, run the migrations there, and put its URL and keys in `.env.demo`
+(same three variables). Then:
+
+```bash
+npm run seed:demo
+```
+
+This adds an admin (`jordan`), six staff members, and a few weeks of shifts with
+answers, assignments, an overlapping booking, and a replacement request. The
+shared password is written to `.env.demo-accounts`. The script refuses to run
+on a project that already has people or shifts.
+
+Run the app against the demo project with:
+
+```bash
+env $(grep -v '^#' .env.demo | xargs) npm run dev
+```
+
 ## Configuration
 
 - **Time zone:** dates and deadlines use `America/Los_Angeles`. Change
@@ -150,6 +171,7 @@ Project layout:
   recurrence, notifications).
 - `components/`: shared layout and UI pieces.
 - `supabase/migrations/`: the full database schema.
+- `scripts/seed-demo.mjs`: optional demo data for an empty project.
 - `tests/`: unit tests.
 
 ## Security
