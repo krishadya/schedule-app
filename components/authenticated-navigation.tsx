@@ -7,10 +7,36 @@ import { signOut } from "@/app/dashboard/actions";
 import type { ProfileRole } from "@/lib/auth/profile";
 import { AppIcon } from "./ui/app-icon";
 
-const navigation = [
-  { href: "/dashboard", label: "Dashboard", icon: "home" as const },
-  { href: "/account", label: "My Account", icon: "account" as const },
-];
+type NavigationItem = {
+  href: string;
+  label: string;
+  icon: "home" | "users" | "account" | "calendar" | "schedule";
+};
+
+const dashboardItem: NavigationItem = {
+  href: "/dashboard",
+  label: "Dashboard",
+  icon: "home",
+};
+const accountItem: NavigationItem = {
+  href: "/account",
+  label: "My Account",
+  icon: "account",
+};
+
+const navigationByRole: Record<ProfileRole, NavigationItem[]> = {
+  admin: [
+    dashboardItem,
+    { href: "/admin", label: "Admin", icon: "users" },
+    accountItem,
+  ],
+  staff: [
+    dashboardItem,
+    { href: "/shifts", label: "Shifts", icon: "calendar" },
+    { href: "/schedule", label: "My Schedule", icon: "schedule" },
+    accountItem,
+  ],
+};
 
 export function AuthenticatedNavigation({
   role,
@@ -20,21 +46,14 @@ export function AuthenticatedNavigation({
   variant: "sidebar" | "mobile";
 }) {
   const pathname = usePathname();
-  const items =
-    role === "admin"
-      ? [
-          navigation[0],
-          { href: "/admin", label: "Admin", icon: "users" as const },
-          navigation[1],
-        ]
-      : navigation;
+  const items = navigationByRole[role];
 
   if (variant === "mobile") {
     return (
       <nav aria-label="Mobile navigation" className="w-full">
         <ul
           className={`grid items-stretch ${
-            role === "admin" ? "grid-cols-4" : "grid-cols-3"
+            items.length === 4 ? "grid-cols-5" : "grid-cols-4"
           }`}
         >
           {items.map((item) => {
