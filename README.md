@@ -10,6 +10,22 @@ Schedule App was first built for an events team at San Francisco State
 University. You can run your own copy with your own free Supabase project.
 Each installation is fully independent and serves one organization.
 
+![Admin dashboard: a calendar of shifts colored by how well they are staffed](docs/screenshots/admin-dashboard.png)
+
+## Screenshots
+
+| Assign people to a shift | Staff answer whether they can work |
+| --- | --- |
+| ![Shift details with staffing progress, people grouped by their answer, and a double-booking warning](docs/screenshots/shift-details.png) | ![Availability page with shifts that need an answer and Yes / Maybe / No choices](docs/screenshots/staff-availability.png) |
+| **See what still needs staff** | **Notifications for things that need action** |
+| ![Shift list with coverage totals and Upcoming / Needs staff / Past tabs](docs/screenshots/admin-shifts.png) | ![Notifications for short-staffed shifts and a replacement request](docs/screenshots/notifications.png) |
+
+<p align="center">
+  <img src="docs/screenshots/staff-mobile.png" alt="Staff dashboard on a phone, prompting them to answer two shifts" width="280">
+</p>
+
+All screenshots use the demo data from `npm run seed:demo`.
+
 ## Features
 
 **For managers (admins)**
@@ -116,7 +132,7 @@ first admin is created by hand:
    ```
 
 4. Sign in to the app with username `yourname` and your password. Then add
-   staff from **Admin → Manage Staff**.
+   staff from the **Staff** page.
 
 **Note on usernames:** people sign in with a username, not an email.
 Internally each username maps to a placeholder email `username@schedule.local`
