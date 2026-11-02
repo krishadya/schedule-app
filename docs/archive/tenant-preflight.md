@@ -2,7 +2,7 @@
 
 This preflight is a read-only inspection of the existing single-organization database before any multi-tenant migration. It does not create an organization, choose an owner, change RLS, or repair data.
 
-The SQL is located at [`supabase/preflight/legacy_data_checks.sql`](../supabase/preflight/legacy_data_checks.sql).
+The SQL is located at [`legacy_data_checks.sql`](./legacy_data_checks.sql).
 
 ## Before running it
 
@@ -18,7 +18,7 @@ The queries read `auth.users` and PostgreSQL system catalogs. Run them through t
 
 1. In the Supabase Dashboard, open **SQL Editor**.
 2. Select **New query**.
-3. Copy the complete contents of `supabase/preflight/legacy_data_checks.sql` into the editor.
+3. Copy the complete contents of `docs/archive/legacy_data_checks.sql` into the editor.
 4. Run the query without changing it.
 5. Review and save each labeled result set internally. Supabase displays the results of the statements separately.
 6. Record the date, environment, and reviewer. Do not publish or attach the raw results to a public issue.
