@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { AppIcon } from "@/components/ui/app-icon";
-import { MetricCard } from "@/components/ui/metric-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import {
@@ -100,6 +99,10 @@ const weekStartFormatter = new Intl.DateTimeFormat("en-US", {
 
 function formatWeekStart(date: string) {
   return weekStartFormatter.format(new Date(`${date}T00:00:00Z`));
+}
+
+function hasPassed(timestamp: string) {
+  return new Date(timestamp).getTime() <= Date.now();
 }
 
 function formatDeadline(deadline: string) {
@@ -347,306 +350,310 @@ export default async function AdminShiftDetailsPage({
     });
   });
 
-  const counts: Record<AvailabilityStatus, number> = {
-    yes: 0,
-    maybe: 0,
-    no: 0,
-    no_response: 0,
-  };
+  const filledSlots = assignmentRoles.reduce(
+    (total, role) => total + Math.min(role.assignedCount, role.staffNeeded),
+    0,
+  );
+  const requiredSlots = assignmentRoles.reduce(
+    (total, role) => total + role.staffNeeded,
+    0,
+  );
+  const deadlinePassed = hasPassed(shift.response_deadline);
+  const shiftId = shift.id;
 
-  for (const member of staff) {
-    counts[getStatus(member)] += 1;
+  const groups: Array<{
+    key: string;
+    title: string;
+    hint: string;
+    members: StaffAvailability[];
+  }> = [
+    {
+      key: "assigned",
+      title: "Working this shift",
+      hint: "Confirmed. They see this shift in their schedule.",
+      members: staff.filter((member) => member.assignedRole),
+    },
+    {
+      key: "yes",
+      title: "Said yes",
+      hint: "Available for the whole shift. Best people to assign.",
+      members: staff.filter(
+        (member) => !member.assignedRole && getStatus(member) === "yes",
+      ),
+    },
+    {
+      key: "maybe",
+      title: "Said maybe",
+      hint: "Available for part of the shift.",
+      members: staff.filter(
+        (member) => !member.assignedRole && getStatus(member) === "maybe",
+      ),
+    },
+    {
+      key: "no_response",
+      title: "No answer yet",
+      hint: "Haven't responded. You can still assign them.",
+      members: staff.filter(
+        (member) => !member.assignedRole && getStatus(member) === "no_response",
+      ),
+    },
+    {
+      key: "no",
+      title: "Said no",
+      hint: "Can't work this shift.",
+      members: staff.filter(
+        (member) => !member.assignedRole && getStatus(member) === "no",
+      ),
+    },
+  ].filter((group) => group.members.length > 0);
+
+  function renderMember(member: StaffAvailability) {
+    const status = getStatus(member);
+
+    return (
+      <li key={member.id} className="p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-semibold text-slate-900">{member.fullName}</p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+              <span>@{member.username}</span>
+              <span className="flex items-center gap-1">
+                <AppIcon name="clock" className="h-3.5 w-3.5 text-indigo-500" />
+                <span className="font-semibold tabular-nums text-slate-700">
+                  {formatMinutes(member.weekMinutes)}
+                </span>{" "}
+                scheduled week of {formatWeekStart(weekStart)}
+              </span>
+            </p>
+          </div>
+          {member.assignedRole ? (
+            <StatusBadge tone={getStatusTone(status)}>
+              {status === "no_response" ? "No answer" : `Said ${getStatusLabel(status).toLowerCase()}`}
+            </StatusBadge>
+          ) : null}
+        </div>
+
+        {member.response?.status === "maybe" &&
+        (member.response.suggestedStartTime || member.response.suggestedEndTime) ? (
+          <p className="mt-2 text-sm text-amber-900">
+            Can work{" "}
+            {member.response.suggestedStartTime
+              ? `from ${formatTime(member.response.suggestedStartTime)}`
+              : ""}
+            {member.response.suggestedStartTime && member.response.suggestedEndTime
+              ? " "
+              : ""}
+            {member.response.suggestedEndTime
+              ? `until ${formatTime(member.response.suggestedEndTime)}`
+              : ""}
+          </p>
+        ) : null}
+
+        {member.response?.note ? (
+          <p className="mt-2 whitespace-pre-wrap rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            “{member.response.note}”
+          </p>
+        ) : null}
+
+        {member.conflicts.length > 0 ? (
+          <div
+            role="note"
+            className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900"
+          >
+            <p className="font-semibold">
+              {member.assignedRole
+                ? "Double-booked: also assigned to an overlapping shift"
+                : "Already assigned to an overlapping shift"}
+            </p>
+            <ul className="mt-1 space-y-0.5">
+              {member.conflicts.map((conflict) => (
+                <li key={conflict.shiftId}>
+                  <Link
+                    href={`/admin/shifts/${conflict.shiftId}`}
+                    className="font-medium underline decoration-amber-400 underline-offset-2 hover:decoration-amber-700"
+                  >
+                    {conflict.eventName}
+                  </Link>{" "}
+                  · {formatTime(conflict.startTime)} –{" "}
+                  {formatTime(conflict.endTime)} · {conflict.assignedRole}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {member.pendingReplacement ? (
+          <ReplacementReview
+            requestId={member.pendingReplacement.id}
+            shiftId={shiftId}
+            reason={member.pendingReplacement.reason}
+          />
+        ) : null}
+
+        <StaffAssignmentControl
+          shiftId={shiftId}
+          userId={member.id}
+          assignedRole={member.assignedRole}
+          roles={assignmentRoles}
+        />
+      </li>
+    );
   }
 
   return (
     <main className="page-shell">
       <div className="page-container">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href="/admin/shifts"
-            className="btn btn-ghost px-0"
-          >
-            ← Back to Shifts
-          </Link>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href={`/admin/shifts/new?duplicate=${shift.id}`}
-              className="btn btn-secondary"
-            >
-              Duplicate Shift
-            </Link>
-            <Link
-              href={`/admin/shifts/${shift.id}/edit`}
-              className="btn btn-secondary"
-            >
-              Edit Shift
-            </Link>
-          </div>
-        </div>
+        <Link href="/admin/shifts" className="btn btn-ghost mb-4 px-0">
+          ← All shifts
+        </Link>
 
-        <section className="surface-card overflow-hidden p-5 sm:p-7">
-          <div className="mb-5 flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100">
-              <AppIcon name="calendar" />
-            </span>
-            <div>
-              <p className="page-eyebrow">Shift details</p>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
+        <header className="surface-card p-5 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="break-words text-2xl font-bold tracking-tight text-slate-950">
                 {shift.event_name}
               </h1>
-            </div>
-          </div>
-          <div className="grid gap-4 text-sm sm:grid-cols-2">
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="flex items-center gap-2 font-semibold text-slate-900">
-                <AppIcon name="clock" className="h-4 w-4 text-indigo-500" />
-                Date and time
-              </p>
-              <p className="mt-2 text-slate-600">{formatDate(shift.date)}</p>
-              <p className="mt-0.5 text-slate-600">
-                {formatTime(shift.start_time)} – {formatTime(shift.end_time)}
-              </p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="flex items-center gap-2 font-semibold text-slate-900">
-                <AppIcon name="location" className="h-4 w-4 text-indigo-500" />
-                Location
-              </p>
-              <p className="mt-2 text-slate-600">
-                {shift.location || "Not specified"}
-              </p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="font-semibold text-slate-900">Response deadline</p>
-              <p className="mt-2 text-slate-600">
+              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
+                <p className="flex items-center gap-2">
+                  <AppIcon name="calendar" className="h-4 w-4 text-indigo-500" />
+                  {formatDate(shift.date)}
+                </p>
+                <p className="flex items-center gap-2">
+                  <AppIcon name="clock" className="h-4 w-4 text-indigo-500" />
+                  {formatTime(shift.start_time)} – {formatTime(shift.end_time)}
+                </p>
+                {shift.location ? (
+                  <p className="flex items-center gap-2">
+                    <AppIcon name="location" className="h-4 w-4 text-indigo-500" />
+                    {shift.location}
+                  </p>
+                ) : null}
+              </div>
+              <p className="mt-2 text-sm text-slate-500">
+                {deadlinePassed ? "Answers closed " : "Staff answer by "}
                 {formatDeadline(shift.response_deadline)}
               </p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="flex items-center gap-2 font-semibold text-slate-900">
-                <AppIcon name="users" className="h-4 w-4 text-indigo-500" />
-                Staff requirements
-              </p>
-              <ul className="mt-2 flex flex-wrap gap-2 text-slate-600">
-                {[...shift.shift_requirements]
-                  .sort((first, second) =>
-                    first.role.localeCompare(second.role),
-                  )
-                  .map((requirement) => (
-                    <li
-                      key={requirement.role}
-                      className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200"
-                    >
-                      {requirement.role} × {requirement.staff_needed}
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="mt-5 border-t border-slate-100 pt-4">
-            <h2 className="text-sm font-semibold text-slate-900">Notes</h2>
-            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">
-              {shift.notes || "No notes."}
-            </p>
-          </div>
-        </section>
-
-        <section className="mt-8">
-          <h2 className="section-title">Assignments</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Current staffing against each required role.
-          </p>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {assignmentRoles.map((role) => (
-              <div
-                key={role.role}
-                className="surface-card p-4"
+            <div className="flex shrink-0 gap-2">
+              <Link
+                href={`/admin/shifts/${shift.id}/edit`}
+                className="btn btn-secondary"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-semibold text-slate-900">{role.role}</h3>
-                  {role.assignedCount >= role.staffNeeded ? (
-                    <StatusBadge tone="emerald">Full</StatusBadge>
-                  ) : null}
-                </div>
-                <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <dt className="text-slate-500">Needed</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {role.staffNeeded}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-slate-500">Assigned</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {role.assignedCount}
-                    </dd>
-                  </div>
-                </dl>
-                <div
-                  role="progressbar"
-                  aria-label={`${role.role} staffing progress`}
-                  aria-valuemin={0}
-                  aria-valuemax={role.staffNeeded}
-                  aria-valuenow={Math.min(role.assignedCount, role.staffNeeded)}
-                  className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100"
-                >
-                  <div
-                    className="h-full rounded-full bg-indigo-500"
-                    style={{
-                      width: `${Math.min(100, (role.assignedCount / role.staffNeeded) * 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+                Edit
+              </Link>
+              <Link
+                href={`/admin/shifts/new?duplicate=${shift.id}`}
+                className="btn btn-secondary"
+              >
+                Duplicate
+              </Link>
+            </div>
           </div>
+          {shift.notes ? (
+            <p className="mt-4 whitespace-pre-wrap rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-100">
+              {shift.notes}
+            </p>
+          ) : null}
+        </header>
+
+        <section className="mt-6" aria-labelledby="staffing-heading">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="staffing-heading" className="section-title">
+              Staffing
+            </h2>
+            {requiredSlots > 0 ? (
+              <StatusBadge
+                tone={
+                  filledSlots >= requiredSlots
+                    ? "emerald"
+                    : filledSlots > 0
+                      ? "amber"
+                      : "slate"
+                }
+              >
+                {filledSlots >= requiredSlots
+                  ? "Fully staffed"
+                  : `${filledSlots} / ${requiredSlots} filled · ${requiredSlots - filledSlots} open`}
+              </StatusBadge>
+            ) : null}
+          </div>
+          {assignmentRoles.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-500">
+              No roles set. Edit the shift to add the people you need.
+            </p>
+          ) : (
+            <div className="surface-card mt-3 grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
+              {assignmentRoles.map((role) => {
+                const filled = Math.min(role.assignedCount, role.staffNeeded);
+                const full = filled >= role.staffNeeded;
+
+                return (
+                  <div key={role.role}>
+                    <div className="flex justify-between gap-3 text-sm">
+                      <span className="font-semibold text-slate-900">{role.role}</span>
+                      <span
+                        className={`font-semibold tabular-nums ${full ? "text-emerald-700" : "text-slate-700"}`}
+                      >
+                        {filled} / {role.staffNeeded}
+                      </span>
+                    </div>
+                    <div
+                      role="progressbar"
+                      aria-label={`${role.role} staffing progress`}
+                      aria-valuemin={0}
+                      aria-valuemax={role.staffNeeded}
+                      aria-valuenow={filled}
+                      className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100"
+                    >
+                      <div
+                        className={`h-full rounded-full ${full ? "bg-emerald-500" : "bg-amber-500"}`}
+                        style={{ width: `${(filled / role.staffNeeded) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
-        <section className="mt-8">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="section-title">
-                Staff Availability
-              </h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Responses from all staff members.
-              </p>
-            </div>
-            <p className="text-sm text-slate-600">
-              {staff.length} {staff.length === 1 ? "staff member" : "staff members"}
-            </p>
-          </div>
-
-          <div
-            aria-label="Availability response summary"
-            className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4"
-          >
-            {(
-              ["yes", "maybe", "no", "no_response"] as AvailabilityStatus[]
-            ).map((status) => (
-              <MetricCard
-                key={status}
-                label={getStatusLabel(status)}
-                value={counts[status]}
-                tone={getStatusTone(status)}
-              />
-            ))}
-          </div>
+        <section className="mt-8" aria-labelledby="people-heading">
+          <h2 id="people-heading" className="section-title">
+            Assign people
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Grouped by what each person said about this shift.
+          </p>
 
           {staff.length === 0 ? (
             <div className="empty-state mt-4 p-8">
               <p className="text-sm text-slate-600">
-                No staff profiles are available yet.
+                No staff accounts yet.{" "}
+                <Link href="/admin/staff" className="font-semibold text-indigo-700">
+                  Add your team
+                </Link>{" "}
+                to start assigning.
               </p>
             </div>
           ) : (
-            <ul className="mt-4 space-y-3">
-              {staff.map((member) => {
-                const status = getStatus(member);
-
-                return (
-                  <li
-                    key={member.id}
-                    className="surface-card p-4 sm:p-5"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-slate-900">
-                          {member.fullName}
-                        </p>
-                        <p className="text-sm text-slate-500">
-                          @{member.username}
-                        </p>
-                        <p className="mt-1 flex items-center gap-1 text-xs text-slate-600">
-                          <AppIcon name="clock" className="h-3.5 w-3.5 text-indigo-500" />
-                          Week of {formatWeekStart(weekStart)}:{" "}
-                          <span className="font-semibold tabular-nums text-slate-900">
-                            {formatMinutes(member.weekMinutes)}
-                          </span>{" "}
-                          scheduled
-                        </p>
-                      </div>
-                      <StatusBadge tone={getStatusTone(status)}>
-                        {getStatusLabel(status)}
-                      </StatusBadge>
-                    </div>
-
-                    {member.response?.status === "maybe" &&
-                    (member.response.suggestedStartTime ||
-                      member.response.suggestedEndTime) ? (
-                      <div className="mt-3 space-y-1 text-sm text-slate-600">
-                        {member.response.suggestedStartTime ? (
-                          <p>
-                            Available from:{" "}
-                            {formatTime(member.response.suggestedStartTime)}
-                          </p>
-                        ) : null}
-                        {member.response.suggestedEndTime ? (
-                          <p>
-                            Available until:{" "}
-                            {formatTime(member.response.suggestedEndTime)}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {member.conflicts.length > 0 ? (
-                      <div
-                        role="note"
-                        className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900"
-                      >
-                        <p className="font-semibold">
-                          {member.assignedRole
-                            ? "Double-booked: also assigned to an overlapping shift"
-                            : "Already assigned to an overlapping shift"}
-                        </p>
-                        <ul className="mt-1 space-y-0.5">
-                          {member.conflicts.map((conflict) => (
-                            <li key={conflict.shiftId}>
-                              <Link
-                                href={`/admin/shifts/${conflict.shiftId}`}
-                                className="font-medium underline decoration-amber-400 underline-offset-2 hover:decoration-amber-700"
-                              >
-                                {conflict.eventName}
-                              </Link>{" "}
-                              · {formatTime(conflict.startTime)} –{" "}
-                              {formatTime(conflict.endTime)} ·{" "}
-                              {conflict.assignedRole}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-
-                    {member.response?.note ? (
-                      <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">
-                        <span className="font-medium">Note:</span>{" "}
-                        {member.response.note}
-                      </p>
-                    ) : null}
-
-                    {member.pendingReplacement ? (
-                      <ReplacementReview
-                        requestId={member.pendingReplacement.id}
-                        shiftId={shift.id}
-                        reason={member.pendingReplacement.reason}
-                      />
-                    ) : null}
-
-                    <StaffAssignmentControl
-                      shiftId={shift.id}
-                      userId={member.id}
-                      assignedRole={member.assignedRole}
-                      roles={assignmentRoles}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="mt-4 space-y-6">
+              {groups.map((group) => (
+                <div key={group.key}>
+                  <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">
+                      {group.title} ({group.members.length})
+                    </h3>
+                    <p className="text-xs text-slate-500">{group.hint}</p>
+                  </div>
+                  <ul className="surface-card divide-y divide-slate-100 overflow-hidden">
+                    {group.members.map(renderMember)}
+                  </ul>
+                </div>
+              ))}
+            </div>
           )}
         </section>
+
         <DeleteShiftControl shiftId={shift.id} eventName={shift.event_name} />
       </div>
     </main>

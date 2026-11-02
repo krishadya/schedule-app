@@ -209,7 +209,7 @@ test("shift details exposes duplication through the existing Create Shift route"
     "utf8",
   );
 
-  assert.match(detailPage, /Duplicate Shift/);
+  assert.match(detailPage, />\s*Duplicate\s*</);
   assert.match(detailPage, /\/admin\/shifts\/new\?duplicate=\$\{shift\.id\}/);
   assert.match(createForm, /action=\{createShift\}/);
   assert.match(createForm, /mode="create"/);

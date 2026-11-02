@@ -38,14 +38,13 @@ function AssignStaffForm({
   );
 
   return (
-    <form action={formAction} className="mt-4 border-t border-slate-100 pt-4">
+    <form action={formAction} className="mt-3">
       <input type="hidden" name="shiftId" value={shiftId} />
       <input type="hidden" name="userId" value={userId} />
 
-      <StatusBadge>Not assigned</StatusBadge>
       <fieldset
         disabled={isPending || !hasAvailableRole}
-        className="mt-2 flex flex-col gap-2 sm:flex-row"
+        className="flex flex-col gap-2 sm:flex-row"
       >
         <label htmlFor={`assignment-role-${userId}`} className="sr-only">
           Assignment role
@@ -55,10 +54,10 @@ function AssignStaffForm({
           name="assignedRole"
           required
           defaultValue=""
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-100"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2.5 sm:max-w-xs text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-100"
         >
           <option value="" disabled>
-            {hasAvailableRole ? "Select a role" : "All roles are full"}
+            {hasAvailableRole ? "Choose a role…" : "All roles are full"}
           </option>
           {roles.map((role) => {
             const isFull = role.assignedCount >= role.staffNeeded;
@@ -100,18 +99,18 @@ function RemoveAssignmentForm({
   );
 
   return (
-    <form action={formAction} className="mt-4 border-t border-slate-100 pt-4">
+    <form action={formAction} className="mt-3">
       <input type="hidden" name="shiftId" value={shiftId} />
       <input type="hidden" name="userId" value={userId} />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <StatusBadge tone="indigo">Assigned: {assignedRole}</StatusBadge>
+        <StatusBadge tone="emerald">Working as {assignedRole}</StatusBadge>
         <button
           type="submit"
           disabled={isPending}
           className="btn btn-danger-outline self-start"
         >
-          {isPending ? "Removing..." : "Remove Assignment"}
+          {isPending ? "Removing..." : "Remove"}
         </button>
       </div>
 

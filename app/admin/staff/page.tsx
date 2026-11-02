@@ -99,7 +99,9 @@ export default async function AdminStaffPage() {
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start">
-          <CreateStaffForm />
+          <div className="order-last lg:order-first">
+            <CreateStaffForm />
+          </div>
 
           <section>
             <div className="flex items-end justify-between gap-4">
