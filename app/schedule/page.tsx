@@ -152,12 +152,6 @@ export default async function SchedulePage() {
               Your confirmed upcoming shifts.
             </p>
           </div>
-          <Link
-            href="/dashboard"
-            className="btn btn-secondary self-start"
-          >
-            Back to Dashboard
-          </Link>
         </header>
 
         <section
@@ -193,11 +187,14 @@ export default async function SchedulePage() {
               <AppIcon name="schedule" className="h-6 w-6" />
             </span>
             <h2 className="mt-4 text-lg font-semibold text-slate-900">
-              No confirmed shifts
+              No upcoming shifts yet
             </h2>
             <p className="mt-2 text-sm text-slate-600">
-              You do not have any confirmed shifts yet.
+              When a manager assigns you to a shift, it shows up here.
             </p>
+            <Link href="/shifts" className="btn btn-primary mt-5">
+              Share your availability
+            </Link>
           </section>
         ) : (
           <div className="space-y-4">

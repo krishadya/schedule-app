@@ -7,6 +7,7 @@ import type {
   CalendarShift,
 } from "@/lib/calendar/types";
 import { getAppDateKey } from "@/lib/date";
+import { calculateShiftCoverage } from "@/lib/shifts/coverage";
 import { createClient } from "@/lib/supabase/server";
 
 function isCalendarResponse(value: string): value is CalendarResponse {
@@ -57,6 +58,7 @@ export async function getCalendarData(
   const availabilityByShift = new Map<string, CalendarAvailability>();
   const assignmentByShift = new Map<string, string>();
   const assignedCountsByShiftAndRole = new Map<string, number>();
+  const assignedRolesByShift = new Map<string, Array<{ assigned_role: string }>>();
 
   if (shiftIds.length > 0) {
     const [availabilityResult, assignmentResult] = await Promise.all([
@@ -110,6 +112,9 @@ export async function getCalendarData(
       }
 
       for (const assignment of assignments) {
+        const roles = assignedRolesByShift.get(assignment.shift_id) ?? [];
+        roles.push({ assigned_role: assignment.assigned_role });
+        assignedRolesByShift.set(assignment.shift_id, roles);
         const key = `${assignment.shift_id}:${assignment.assigned_role}`;
         assignedCountsByShiftAndRole.set(
           key,
@@ -156,6 +161,20 @@ export async function getCalendarData(
       availability,
       assignedRole,
       status,
+      coverage:
+        profile.role === "admin"
+          ? (({ status, filled, required, open }) => ({
+              status,
+              filled,
+              required,
+              open,
+            }))(
+              calculateShiftCoverage(
+                shift.shift_requirements,
+                assignedRolesByShift.get(shift.id) ?? [],
+              ),
+            )
+          : null,
     };
   });
 

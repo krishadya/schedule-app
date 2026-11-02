@@ -7,16 +7,10 @@ import { AppIcon } from "@/components/ui/app-icon";
 import { MetricCard } from "@/components/ui/metric-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type {
+  CalendarCoverage,
   CalendarShift,
   CalendarStatus,
 } from "@/lib/calendar/types";
-
-type CalendarFilter =
-  | "all"
-  | "assigned"
-  | "available"
-  | "maybe"
-  | "needs-response";
 
 type CalendarViewProps = {
   shifts: CalendarShift[];
@@ -25,63 +19,135 @@ type CalendarViewProps = {
   isAdmin: boolean;
 };
 
+type Tone = "emerald" | "indigo" | "amber" | "rose" | "slate";
+
+type Display = {
+  label: string;
+  tone: Tone;
+  item: string;
+  dot: string;
+  accent: string;
+};
+
+type Filter = {
+  value: string;
+  label: string;
+  matches: (shift: CalendarShift) => boolean;
+};
+
 const APP_TIME_ZONE = "America/Los_Angeles";
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const filters: Array<{ value: CalendarFilter; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "assigned", label: "Assigned" },
-  { value: "available", label: "Available / Yes" },
-  { value: "maybe", label: "Maybe" },
-  { value: "needs-response", label: "Needs Response" },
-];
-
-const statusStyles: Record<
-  CalendarStatus,
-  {
-    label: string;
-    tone: "emerald" | "indigo" | "amber" | "rose" | "slate";
-    item: string;
-    dot: string;
-    accent: string;
-  }
-> = {
-  assigned: {
-    label: "Assigned",
-    tone: "emerald",
+const toneStyles: Record<Tone, Omit<Display, "label" | "tone">> = {
+  emerald: {
     item: "border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100",
     dot: "bg-emerald-500",
     accent: "border-l-emerald-500",
   },
-  available: {
-    label: "Available",
-    tone: "indigo",
+  indigo: {
     item: "border-indigo-200 bg-indigo-50 text-indigo-900 hover:bg-indigo-100",
     dot: "bg-indigo-500",
     accent: "border-l-indigo-500",
   },
-  maybe: {
-    label: "Maybe",
-    tone: "amber",
+  amber: {
     item: "border-amber-200 bg-amber-50 text-amber-950 hover:bg-amber-100",
     dot: "bg-amber-500",
     accent: "border-l-amber-500",
   },
-  unavailable: {
-    label: "Unavailable",
-    tone: "rose",
+  rose: {
     item: "border-rose-200 bg-rose-50 text-rose-900 hover:bg-rose-100",
     dot: "bg-rose-400",
     accent: "border-l-rose-400",
   },
-  "needs-response": {
-    label: "Response Needed",
-    tone: "slate",
+  slate: {
     item: "border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100",
     dot: "bg-slate-400",
     accent: "border-l-slate-400",
   },
 };
+
+function display(label: string, tone: Tone): Display {
+  return { label, tone, ...toneStyles[tone] };
+}
+
+// What a staff member sees: their own answer and assignment.
+const staffDisplay: Record<CalendarStatus, Display> = {
+  assigned: display("You're working", "emerald"),
+  available: display("You said yes", "indigo"),
+  maybe: display("You said maybe", "amber"),
+  unavailable: display("You can't work", "rose"),
+  "needs-response": display("Needs your answer", "slate"),
+};
+
+// What an admin sees: how well the shift is staffed.
+const coverageDisplay: Record<CalendarCoverage["status"], Display> = {
+  fully_staffed: display("Fully staffed", "emerald"),
+  partially_staffed: display("Needs staff", "amber"),
+  unstaffed: display("No one assigned", "slate"),
+  no_requirements: display("No roles set", "slate"),
+};
+
+const staffFilters: Filter[] = [
+  { value: "all", label: "All", matches: () => true },
+  {
+    value: "needs-response",
+    label: "Needs your answer",
+    matches: (shift) => shift.status === "needs-response",
+  },
+  {
+    value: "assigned",
+    label: "You're working",
+    matches: (shift) => shift.status === "assigned",
+  },
+  {
+    value: "responded",
+    label: "You said yes / maybe",
+    matches: (shift) => shift.status === "available" || shift.status === "maybe",
+  },
+];
+
+function needsStaff(shift: CalendarShift) {
+  return (
+    shift.coverage?.status === "partially_staffed" ||
+    shift.coverage?.status === "unstaffed"
+  );
+}
+
+const adminFilters: Filter[] = [
+  { value: "all", label: "All", matches: () => true },
+  { value: "needs-staff", label: "Needs staff", matches: needsStaff },
+  {
+    value: "full",
+    label: "Fully staffed",
+    matches: (shift) => shift.coverage?.status === "fully_staffed",
+  },
+];
+
+function getDisplay(shift: CalendarShift, isAdmin: boolean) {
+  return isAdmin && shift.coverage
+    ? coverageDisplay[shift.coverage.status]
+    : staffDisplay[shift.status];
+}
+
+// Short label for the small calendar chips.
+function getChipLabel(shift: CalendarShift, isAdmin: boolean) {
+  if (!isAdmin || !shift.coverage) {
+    return staffDisplay[shift.status].label;
+  }
+
+  const { status, open } = shift.coverage;
+
+  if (status === "fully_staffed") return "Full";
+  if (status === "no_requirements") return "No roles";
+  return `${open} open`;
+}
+
+// Longer admin label for cards and badges.
+function getStaffingLabel(coverage: CalendarCoverage) {
+  if (coverage.status === "fully_staffed") return "Fully staffed";
+  if (coverage.status === "no_requirements") return "No roles set";
+  return `${coverage.filled} / ${coverage.required} staffed`;
+}
 
 function parseDateOnly(date: string) {
   const [year, month, day] = date.split("-").map(Number);
@@ -134,6 +200,17 @@ function formatTime(time: string) {
   return `${twelveHour}:${String(minutes).padStart(2, "0")} ${period}`;
 }
 
+// Compact time for small calendar chips: "9 AM", "2:30 PM".
+function formatShortTime(time: string) {
+  const [hours, minutes] = time.split(":").map(Number);
+  const period = hours >= 12 ? "PM" : "AM";
+  const twelveHour = hours % 12 || 12;
+
+  return minutes === 0
+    ? `${twelveHour} ${period}`
+    : `${twelveHour}:${String(minutes).padStart(2, "0")} ${period}`;
+}
+
 function formatDeadline(deadline: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -141,8 +218,9 @@ function formatDeadline(deadline: string) {
     hour: "numeric",
     minute: "2-digit",
     timeZone: APP_TIME_ZONE,
-    timeZoneName: "short",
-  }).format(new Date(deadline));
+  })
+    .format(new Date(deadline))
+    .replace(",", " at");
 }
 
 function compareShifts(first: CalendarShift, second: CalendarShift) {
@@ -153,24 +231,11 @@ function compareShifts(first: CalendarShift, second: CalendarShift) {
     : first.startTime.localeCompare(second.startTime);
 }
 
-function matchesFilter(shift: CalendarShift, filter: CalendarFilter) {
-  return filter === "all" || shift.status === filter;
-}
+function getUpcomingShifts(shifts: CalendarShift[], isAdmin: boolean) {
+  if (isAdmin) {
+    return [...shifts].sort(compareShifts).slice(0, 6);
+  }
 
-function getMonthShifts(
-  shifts: CalendarShift[],
-  year: number,
-  month: number,
-  filter: CalendarFilter,
-) {
-  const monthPrefix = `${year}-${String(month).padStart(2, "0")}-`;
-
-  return shifts.filter(
-    (shift) => shift.date.startsWith(monthPrefix) && matchesFilter(shift, filter),
-  );
-}
-
-function getUpcomingShifts(shifts: CalendarShift[]) {
   const priority: Record<CalendarStatus, number> = {
     assigned: 0,
     "needs-response": 1,
@@ -190,10 +255,103 @@ function getUpcomingShifts(shifts: CalendarShift[]) {
     .sort(compareShifts);
 }
 
-function StatusLabel({ status }: { status: CalendarStatus }) {
-  const style = statusStyles[status];
+function AdminStaffing({ shift }: { shift: CalendarShift }) {
+  return (
+    <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-slate-900">Staffing</h3>
+        {shift.coverage && shift.coverage.required > 0 ? (
+          <span className="text-sm font-semibold tabular-nums text-slate-700">
+            {shift.coverage.filled} / {shift.coverage.required} filled
+          </span>
+        ) : null}
+      </div>
+      {shift.requirements.length > 0 ? (
+        <ul className="mt-3 space-y-2">
+          {shift.requirements.map((requirement) => {
+            const assigned = Math.min(
+              requirement.assignedCount ?? 0,
+              requirement.staffNeeded,
+            );
+            const full = assigned >= requirement.staffNeeded;
 
-  return <StatusBadge tone={style.tone}>{style.label}</StatusBadge>;
+            return (
+              <li key={requirement.role} className="text-sm">
+                <div className="flex justify-between gap-3">
+                  <span className="text-slate-700">{requirement.role}</span>
+                  <span
+                    className={`font-semibold tabular-nums ${full ? "text-emerald-700" : "text-slate-900"}`}
+                  >
+                    {assigned} / {requirement.staffNeeded}
+                  </span>
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className={`h-full rounded-full ${full ? "bg-emerald-500" : "bg-amber-500"}`}
+                    style={{
+                      width: `${(assigned / requirement.staffNeeded) * 100}%`,
+                    }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-slate-500">No roles set for this shift.</p>
+      )}
+    </div>
+  );
+}
+
+function StaffStatus({ shift }: { shift: CalendarShift }) {
+  const responseLabel = shift.availability
+    ? shift.availability.response.charAt(0).toUpperCase() +
+      shift.availability.response.slice(1)
+    : "Not answered yet";
+
+  return (
+    <>
+      <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
+        <h3 className="text-sm font-semibold text-slate-900">Your status</h3>
+        <dl className="mt-3 space-y-2 text-sm">
+          <div className="flex justify-between gap-4">
+            <dt className="text-slate-500">Your answer</dt>
+            <dd className="font-medium text-slate-900">{responseLabel}</dd>
+          </div>
+          {shift.assignedRole ? (
+            <div className="flex justify-between gap-4">
+              <dt className="text-slate-500">Your role</dt>
+              <dd className="font-medium text-slate-900">{shift.assignedRole}</dd>
+            </div>
+          ) : null}
+          <div className="flex justify-between gap-4">
+            <dt className="text-slate-500">Answer by</dt>
+            <dd className="text-right font-medium text-slate-900">
+              {formatDeadline(shift.responseDeadline)}
+            </dd>
+          </div>
+        </dl>
+      </div>
+      <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
+        <h3 className="text-sm font-semibold text-slate-900">People needed</h3>
+        {shift.requirements.length > 0 ? (
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {shift.requirements.map((requirement) => (
+              <li
+                key={requirement.role}
+                className="rounded-full bg-white px-3 py-1.5 text-sm text-slate-700 ring-1 ring-slate-200"
+              >
+                {requirement.role} × {requirement.staffNeeded}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-slate-500">None listed.</p>
+        )}
+      </div>
+    </>
+  );
 }
 
 function ShiftDetails({
@@ -209,25 +367,17 @@ function ShiftDetails({
 }) {
   const deadlinePassed =
     new Date(shift.responseDeadline).getTime() <= requestTimestamp;
-  const responseLabel = shift.availability
-    ? shift.availability.response.charAt(0).toUpperCase() +
-      shift.availability.response.slice(1)
-    : "No response";
+  const shiftDisplay = getDisplay(shift, isAdmin);
 
   return (
     <section
       aria-label={`Details for ${shift.eventName}`}
-      className={`surface-card border-l-4 ${statusStyles[shift.status].accent} p-5 sm:p-6`}
+      className={`surface-card border-l-4 ${shiftDisplay.accent} p-5 sm:p-6`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusLabel status={shift.status} />
-            {shift.assignedRole ? (
-              <StatusBadge tone="indigo">{shift.assignedRole}</StatusBadge>
-            ) : null}
-          </div>
-          <h2 className="mt-3 text-xl font-bold tracking-tight text-slate-950">
+        <div className="min-w-0">
+          <StatusBadge tone={shiftDisplay.tone}>{shiftDisplay.label}</StatusBadge>
+          <h2 className="mt-3 break-words text-xl font-bold tracking-tight text-slate-950">
             {shift.eventName}
           </h2>
         </div>
@@ -241,7 +391,7 @@ function ShiftDetails({
         </button>
       </div>
 
-      <div className="mt-5 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
+      <div className="mt-4 space-y-2 text-sm text-slate-700">
         <p className="flex items-start gap-2">
           <AppIcon name="calendar" className="mt-0.5 h-4 w-4 text-indigo-500" />
           <span>{formatDate(shift.date)}</span>
@@ -253,81 +403,36 @@ function ShiftDetails({
           </span>
         </p>
         {shift.location ? (
-          <p className="flex items-start gap-2 sm:col-span-2">
+          <p className="flex items-start gap-2">
             <AppIcon name="location" className="mt-0.5 h-4 w-4 text-indigo-500" />
             <span>{shift.location}</span>
           </p>
         ) : null}
       </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
-          <h3 className="text-sm font-semibold text-slate-900">
-            Staffing requirements
-          </h3>
-          {shift.requirements.length > 0 ? (
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {shift.requirements.map((requirement) => (
-                <li
-                  key={requirement.role}
-                  className="rounded-full bg-white px-3 py-1.5 text-sm text-slate-700 ring-1 ring-slate-200"
-                >
-                  {requirement.role}: {isAdmin && requirement.assignedCount !== null
-                    ? `${requirement.assignedCount} / ${requirement.staffNeeded} assigned`
-                    : `${requirement.staffNeeded} needed`}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-2 text-sm text-slate-500">None listed.</p>
-          )}
-        </div>
-
-        <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
-          <h3 className="text-sm font-semibold text-slate-900">Your status</h3>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Response</dt>
-              <dd className="font-medium text-slate-900">{responseLabel}</dd>
-            </div>
-            {shift.assignedRole ? (
-              <div className="flex justify-between gap-4">
-                <dt className="text-slate-500">Assigned role</dt>
-                <dd className="font-medium text-slate-900">
-                  {shift.assignedRole}
-                </dd>
-              </div>
-            ) : null}
-            <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Response deadline</dt>
-              <dd className="text-right font-medium text-slate-900">
-                {formatDeadline(shift.responseDeadline)}
-              </dd>
-            </div>
-          </dl>
-        </div>
+      <div className="mt-5 grid gap-4">
+        {isAdmin ? <AdminStaffing shift={shift} /> : <StaffStatus shift={shift} />}
       </div>
 
-      {shift.availability?.response === "maybe" &&
+      {!isAdmin &&
+      shift.availability?.response === "maybe" &&
       (shift.availability.suggestedStartTime ||
         shift.availability.suggestedEndTime) ? (
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          <span className="font-semibold">Maybe availability: </span>
+          <span className="font-semibold">You can work: </span>
           {shift.availability.suggestedStartTime
             ? formatTime(shift.availability.suggestedStartTime)
-            : "Not specified"}
+            : "start"}
           {" – "}
           {shift.availability.suggestedEndTime
             ? formatTime(shift.availability.suggestedEndTime)
-            : "Not specified"}
+            : "end"}
         </div>
       ) : null}
 
-      {shift.availability?.note ? (
+      {!isAdmin && shift.availability?.note ? (
         <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-          <h3 className="text-sm font-semibold text-slate-900">
-            Your availability note
-          </h3>
+          <h3 className="text-sm font-semibold text-slate-900">Your note</h3>
           <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
             {shift.availability.note}
           </p>
@@ -343,57 +448,39 @@ function ShiftDetails({
         </div>
       ) : null}
 
-      <div className="mt-5 flex flex-wrap items-center gap-3">
-        {!deadlinePassed ? (
-          <Link href={`/shifts#shift-${shift.id}`} className="btn btn-primary">
-            {shift.availability ? "Update Availability" : "Set Availability"}
-          </Link>
-        ) : (
-          <StatusBadge>Responses closed</StatusBadge>
-        )}
-        <span className="text-sm text-slate-500">
-          Deadline: {formatDeadline(shift.responseDeadline)}
-        </span>
-      </div>
-
       {isAdmin ? (
-        <div className="mt-5 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row">
-          <Link
-            href={`/admin/shifts/${shift.id}`}
-            className="btn btn-primary w-full sm:w-auto"
-          >
-            View Responses / Assign Staff
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Link href={`/admin/shifts/${shift.id}`} className="btn btn-primary">
+            Manage Staffing
+          </Link>
+          <Link href={`/admin/shifts/${shift.id}/edit`} className="btn btn-secondary">
+            Edit
           </Link>
           <Link
-            href={`/admin/shifts/${shift.id}/edit`}
-            className="btn btn-secondary w-full sm:w-auto"
+            href={`/admin/shifts/new?duplicate=${shift.id}`}
+            className="btn btn-secondary"
           >
-            Edit Shift
+            Duplicate
           </Link>
         </div>
-      ) : null}
+      ) : shift.assignedRole ? (
+        <div className="mt-5">
+          <Link href="/schedule" className="btn btn-secondary">
+            View in My Schedule
+          </Link>
+        </div>
+      ) : (
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          {!deadlinePassed ? (
+            <Link href={`/shifts#shift-${shift.id}`} className="btn btn-primary">
+              {shift.availability ? "Change My Answer" : "Answer Now"}
+            </Link>
+          ) : (
+            <StatusBadge>Answers closed</StatusBadge>
+          )}
+        </div>
+      )}
     </section>
-  );
-}
-
-function SelectedDateAction({ date }: { date: string }) {
-  return (
-    <div className="mt-4 flex flex-col gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-wide text-indigo-600">
-          Selected date
-        </p>
-        <p className="mt-1 font-semibold text-slate-950">
-          Create shift on {formatDate(date)}
-        </p>
-      </div>
-      <Link
-        href={`/admin/shifts/new?date=${date}`}
-        className="btn btn-primary w-full sm:w-auto"
-      >
-        + Create Shift
-      </Link>
-    </div>
   );
 }
 
@@ -408,26 +495,24 @@ export function CalendarView({
     year: currentDate.year,
     month: currentDate.month,
   });
-  const [activeFilter, setActiveFilter] = useState<CalendarFilter>("all");
+  const filters = isAdmin ? adminFilters : staffFilters;
+  const [activeFilter, setActiveFilter] = useState("all");
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const counts = {
-    assigned: shifts.filter((shift) => shift.status === "assigned").length,
-    available: shifts.filter((shift) => shift.status === "available").length,
-    maybe: shifts.filter((shift) => shift.status === "maybe").length,
-    needsResponse: shifts.filter((shift) => shift.status === "needs-response")
-      .length,
-  };
-  const monthShifts = getMonthShifts(
-    shifts,
-    visibleMonth.year,
-    visibleMonth.month,
-    activeFilter,
+  const filter = filters.find((item) => item.value === activeFilter) ?? filters[0];
+  const monthPrefix = `${visibleMonth.year}-${String(visibleMonth.month).padStart(2, "0")}-`;
+  const monthShifts = shifts.filter(
+    (shift) => shift.date.startsWith(monthPrefix) && filter.matches(shift),
   );
   const selectedShift =
     shifts.find((shift) => shift.id === selectedShiftId) ?? null;
-  const upcomingShifts = getUpcomingShifts(shifts);
+  const upcomingShifts = getUpcomingShifts(shifts, isAdmin);
+  const needsResponseCount = shifts.filter(
+    (shift) =>
+      shift.status === "needs-response" &&
+      new Date(shift.responseDeadline).getTime() > requestTimestamp,
+  ).length;
+
   const firstWeekday = new Date(
     Date.UTC(visibleMonth.year, visibleMonth.month - 1, 1),
   ).getUTCDay();
@@ -458,22 +543,15 @@ export function CalendarView({
       month: nextMonth.getUTCMonth() + 1,
     });
     setSelectedShiftId(null);
-    setSelectedDate(null);
   }
 
   function showToday() {
     setVisibleMonth({ year: currentDate.year, month: currentDate.month });
     setSelectedShiftId(null);
-    setSelectedDate(null);
   }
 
-  function changeFilter(filter: CalendarFilter) {
-    setActiveFilter(filter);
-    setSelectedShiftId(null);
-  }
-
-  function selectDate(date: string) {
-    setSelectedDate((current) => (current === date ? null : date));
+  function changeFilter(value: string) {
+    setActiveFilter(value);
     setSelectedShiftId(null);
   }
 
@@ -481,339 +559,336 @@ export function CalendarView({
     setSelectedShiftId((current) =>
       toggle && current === shiftId ? null : shiftId,
     );
-    setSelectedDate(null);
   }
+
+  const adminCounts = {
+    needsStaff: shifts.filter(needsStaff).length,
+    full: shifts.filter((shift) => shift.coverage?.status === "fully_staffed")
+      .length,
+    openSlots: shifts.reduce((total, shift) => total + (shift.coverage?.open ?? 0), 0),
+  };
+  const staffCounts = {
+    assigned: shifts.filter((shift) => shift.status === "assigned").length,
+    responded: shifts.filter(
+      (shift) => shift.status === "available" || shift.status === "maybe",
+    ).length,
+  };
 
   return (
     <>
+      {!isAdmin && needsResponseCount > 0 ? (
+        <div className="mb-5 flex flex-col gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold text-indigo-950">
+              {needsResponseCount}{" "}
+              {needsResponseCount === 1 ? "shift is" : "shifts are"} waiting for
+              your answer
+            </p>
+            <p className="mt-0.5 text-sm text-indigo-800">
+              Let your manager know if you can work.
+            </p>
+          </div>
+          <Link href="/shifts" className="btn btn-primary shrink-0">
+            Answer Now
+          </Link>
+        </div>
+      ) : null}
+
       <section
         aria-label="Schedule summary"
         className="grid grid-cols-2 gap-3 lg:grid-cols-4"
       >
-        <MetricCard
-          label="Assigned"
-          value={counts.assigned}
-          tone="emerald"
-          icon={<AppIcon name="check" className="h-4 w-4" />}
-          description="Confirmed shifts"
-        />
-        <MetricCard
-          label="Available"
-          value={counts.available}
-          tone="indigo"
-          icon={<AppIcon name="check" className="h-4 w-4" />}
-          description="You can work"
-        />
-        <MetricCard
-          label="Maybe"
-          value={counts.maybe}
-          tone="amber"
-          icon={<AppIcon name="clock" className="h-4 w-4" />}
-          description="Possible, not confirmed"
-        />
-        <MetricCard
-          label="Needs Response"
-          value={counts.needsResponse}
-          tone="slate"
-          icon={<AppIcon name="calendar" className="h-4 w-4" />}
-          description="Awaiting your reply"
-        />
+        {isAdmin ? (
+          <>
+            <MetricCard
+              label="Upcoming shifts"
+              value={shifts.length}
+              tone="indigo"
+              icon={<AppIcon name="calendar" className="h-4 w-4" />}
+              description="From today onward"
+            />
+            <MetricCard
+              label="Needs staff"
+              value={adminCounts.needsStaff}
+              tone="amber"
+              icon={<AppIcon name="users" className="h-4 w-4" />}
+              description="Shifts with open slots"
+            />
+            <MetricCard
+              label="Open slots"
+              value={adminCounts.openSlots}
+              tone="slate"
+              icon={<AppIcon name="plus" className="h-4 w-4" />}
+              description="People still needed"
+            />
+            <MetricCard
+              label="Fully staffed"
+              value={adminCounts.full}
+              tone="emerald"
+              icon={<AppIcon name="check" className="h-4 w-4" />}
+              description="Every role filled"
+            />
+          </>
+        ) : (
+          <>
+            <MetricCard
+              label="Needs your answer"
+              value={needsResponseCount}
+              tone="indigo"
+              icon={<AppIcon name="calendar" className="h-4 w-4" />}
+              description="Open for responses"
+            />
+            <MetricCard
+              label="You're working"
+              value={staffCounts.assigned}
+              tone="emerald"
+              icon={<AppIcon name="check" className="h-4 w-4" />}
+              description="Confirmed shifts"
+            />
+            <MetricCard
+              label="You said yes / maybe"
+              value={staffCounts.responded}
+              tone="amber"
+              icon={<AppIcon name="clock" className="h-4 w-4" />}
+              description="Not assigned yet"
+            />
+            <MetricCard
+              label="Upcoming shifts"
+              value={shifts.length}
+              tone="slate"
+              icon={<AppIcon name="schedule" className="h-4 w-4" />}
+              description="Posted by managers"
+            />
+          </>
+        )}
       </section>
 
       <div
         className={`mt-6 grid items-start gap-5 ${
-          selectedShift ? "xl:grid-cols-[minmax(0,1fr)_24rem]" : ""
+          selectedShift ? "2xl:grid-cols-[minmax(0,1fr)_24rem]" : ""
         }`}
       >
         <section
           aria-labelledby="month-heading"
           className="surface-card min-w-0 overflow-hidden"
         >
-        <div className="border-b border-slate-200 p-4 sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => moveMonth(-1)}
-                className="btn btn-secondary px-3"
-                aria-label="Previous month"
+          <div className="border-b border-slate-200 p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2
+                id="month-heading"
+                aria-live="polite"
+                className="text-xl font-bold tracking-tight text-slate-950"
               >
-                <span aria-hidden="true">←</span>
-                <span className="hidden sm:inline">Previous</span>
-              </button>
-              <button type="button" onClick={showToday} className="btn btn-secondary">
-                Today
-              </button>
-              <button
-                type="button"
-                onClick={() => moveMonth(1)}
-                className="btn btn-secondary px-3"
-                aria-label="Next month"
-              >
-                <span className="hidden sm:inline">Next</span>
-                <span aria-hidden="true">→</span>
-              </button>
-            </div>
-            <h2
-              id="month-heading"
-              aria-live="polite"
-              className="text-xl font-bold tracking-tight text-slate-950 lg:order-first"
-            >
-              {formatMonth(visibleMonth.year, visibleMonth.month)}
-            </h2>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2" aria-label="Calendar filters">
-            {filters.map((filter) => (
-              <button
-                key={filter.value}
-                type="button"
-                aria-pressed={activeFilter === filter.value}
-                onClick={() => changeFilter(filter.value)}
-                className={`min-h-9 rounded-full border px-3 py-1.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ${
-                  activeFilter === filter.value
-                    ? "border-indigo-600 bg-indigo-600 text-white"
-                    : "border-slate-300 bg-white text-slate-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
-
-          {isAdmin && selectedDate ? (
-            <div className="hidden md:block">
-              <SelectedDateAction date={selectedDate} />
-            </div>
-          ) : null}
-        </div>
-
-        <div className="hidden md:block">
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
-            {WEEKDAYS.map((weekday) => (
-              <div
-                key={weekday}
-                className="px-2 py-2 text-center text-xs font-bold uppercase tracking-wide text-slate-500"
-              >
-                {weekday}
+                {formatMonth(visibleMonth.year, visibleMonth.month)}
+              </h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveMonth(-1)}
+                    className="btn btn-secondary px-3"
+                    aria-label="Previous month"
+                  >
+                    <span aria-hidden="true">←</span>
+                  </button>
+                  <button type="button" onClick={showToday} className="btn btn-secondary">
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveMonth(1)}
+                    className="btn btn-secondary px-3"
+                    aria-label="Next month"
+                  >
+                    <span aria-hidden="true">→</span>
+                  </button>
+                </div>
+                {isAdmin ? (
+                  <Link href="/admin/shifts/new" className="btn btn-primary">
+                    <AppIcon name="plus" className="h-4 w-4" />
+                    New Shift
+                  </Link>
+                ) : null}
               </div>
-            ))}
+            </div>
+
+            <div
+              className="mt-4 flex gap-2 overflow-x-auto pb-1"
+              role="group"
+              aria-label="Show"
+            >
+              {filters.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  aria-pressed={activeFilter === item.value}
+                  onClick={() => changeFilter(item.value)}
+                  className={`min-h-9 shrink-0 rounded-full border px-3 py-1.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ${
+                    activeFilter === item.value
+                      ? "border-indigo-600 bg-indigo-600 text-white"
+                      : "border-slate-300 bg-white text-slate-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div role="grid" aria-label={formatMonth(visibleMonth.year, visibleMonth.month)} className="grid grid-cols-7 gap-px bg-slate-200">
-            {cells.map((day, index) => {
-              if (day === null) {
+
+          <div className="hidden md:block">
+            <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
+              {WEEKDAYS.map((weekday) => (
+                <div
+                  key={weekday}
+                  className="px-2 py-2 text-center text-xs font-bold uppercase tracking-wide text-slate-500"
+                >
+                  {weekday}
+                </div>
+              ))}
+            </div>
+            <div
+              role="grid"
+              aria-label={formatMonth(visibleMonth.year, visibleMonth.month)}
+              className="grid grid-cols-7 gap-px bg-slate-200"
+            >
+              {cells.map((day, index) => {
+                if (day === null) {
+                  return (
+                    <div
+                      key={`empty-${index}`}
+                      role="gridcell"
+                      className="min-h-32 bg-slate-50"
+                    />
+                  );
+                }
+
+                const date = toDateKey(visibleMonth.year, visibleMonth.month, day);
+                const dayShifts = shiftsByDate.get(date) ?? [];
+                const isToday = date === today;
+                const isPast = date < today;
+
                 return (
                   <div
-                    key={`empty-${index}`}
+                    key={date}
                     role="gridcell"
-                    className="min-h-36 bg-slate-50"
-                  />
-                );
-              }
-
-              const date = toDateKey(
-                visibleMonth.year,
-                visibleMonth.month,
-                day,
-              );
-              const dayShifts = shiftsByDate.get(date) ?? [];
-              const isToday = date === today;
-
-              return (
-                <div
-                  key={date}
-                  role="gridcell"
-                  aria-label={`${formatDate(date)}, ${dayShifts.length} shifts`}
-                  className={`min-h-36 min-w-0 bg-white p-2 ${isToday ? "ring-2 ring-inset ring-indigo-400" : ""}`}
-                >
-                  <div className="mb-2 flex items-center justify-between">
-                    {isAdmin ? (
-                      <button
-                        type="button"
-                        onClick={() => selectDate(date)}
-                        aria-pressed={selectedDate === date}
-                        aria-label={`Select ${formatDate(date)} to create a shift`}
-                        className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ${
-                          selectedDate === date
-                            ? "bg-indigo-600 text-white"
-                            : isToday
-                              ? "bg-indigo-100 text-indigo-800 ring-1 ring-indigo-300"
-                              : "text-slate-700 hover:bg-indigo-50 hover:text-indigo-700"
-                        }`}
-                      >
-                        {day}
-                      </button>
-                    ) : (
+                    aria-label={`${formatDate(date)}, ${dayShifts.length} shifts`}
+                    className={`group min-h-32 min-w-0 p-2 ${isPast ? "bg-slate-50/70" : "bg-white"}`}
+                  >
+                    <div className="mb-1.5 flex items-center justify-between">
                       <span
                         className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${
                           isToday
                             ? "bg-indigo-600 text-white"
-                            : "text-slate-700"
+                            : isPast
+                              ? "text-slate-400"
+                              : "text-slate-700"
                         }`}
                       >
                         {day}
                       </span>
-                    )}
-                    {dayShifts.length > 0 ? (
-                      <span className="text-[11px] font-medium text-slate-400">
-                        {dayShifts.length}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="max-h-24 space-y-1.5 overflow-y-auto pr-0.5">
-                    {dayShifts.map((shift) => {
-                      const style = statusStyles[shift.status];
-
-                      return (
-                        <button
-                          key={shift.id}
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            selectShift(shift.id);
-                          }}
-                          aria-expanded={selectedShiftId === shift.id}
-                          className={`block w-full rounded-md border px-2 py-1.5 text-left text-xs transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-indigo-600 ${style.item} ${
-                            selectedShiftId === shift.id
-                              ? "ring-2 ring-indigo-500"
-                              : ""
-                          }`}
+                      {isAdmin && !isPast ? (
+                        <Link
+                          href={`/admin/shifts/new?date=${date}`}
+                          aria-label={`Create a shift on ${formatDate(date)}`}
+                          title="Add a shift on this day"
+                          className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 opacity-0 transition hover:bg-indigo-50 hover:text-indigo-700 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-indigo-600 group-hover:opacity-100"
                         >
-                          <span className="block truncate font-semibold">
-                            {shift.eventName}
-                          </span>
-                          <span className="mt-0.5 flex items-center gap-1 truncate opacity-80">
-                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${style.dot}`} />
-                            {formatTime(shift.startTime)} · {style.label}
-                          </span>
-                        </button>
-                      );
-                    })}
+                          <AppIcon name="plus" className="h-4 w-4" />
+                        </Link>
+                      ) : null}
+                    </div>
+                    <div className="max-h-24 space-y-1.5 overflow-y-auto pr-0.5">
+                      {dayShifts.map((shift) => {
+                        const shiftDisplay = getDisplay(shift, isAdmin);
+
+                        return (
+                          <button
+                            key={shift.id}
+                            type="button"
+                            onClick={() => selectShift(shift.id)}
+                            aria-expanded={selectedShiftId === shift.id}
+                            className={`block w-full rounded-md border px-2 py-1.5 text-left text-xs transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-indigo-600 ${shiftDisplay.item} ${
+                              selectedShiftId === shift.id ? "ring-2 ring-indigo-500" : ""
+                            }`}
+                          >
+                            <span className="block truncate font-semibold">
+                              {shift.eventName}
+                            </span>
+                            <span className="mt-0.5 flex items-center gap-1 truncate opacity-80">
+                              <span
+                                className={`h-1.5 w-1.5 shrink-0 rounded-full ${shiftDisplay.dot}`}
+                              />
+                              {formatShortTime(shift.startTime)} ·{" "}
+                              {getChipLabel(shift, isAdmin)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {monthShifts.length === 0 ? (
-            <div className="border-t border-slate-200 px-5 py-6 text-center text-sm text-slate-500">
-              No shifts match this view for {formatMonth(visibleMonth.year, visibleMonth.month)}.
-            </div>
-          ) : null}
-        </div>
-
-        {isAdmin ? (
-          <div className="border-b border-slate-200 bg-slate-50 p-3 md:hidden">
-            <p className="mb-2 text-xs font-semibold text-slate-600">
-              Select any date to create another shift
-            </p>
-            <div className="grid grid-cols-7 gap-1" aria-label="Select a shift date">
-              {WEEKDAYS.map((weekday) => (
-                <span
-                  key={weekday}
-                  className="py-1 text-center text-[10px] font-bold uppercase text-slate-400"
-                >
-                  {weekday.charAt(0)}
-                </span>
-              ))}
-              {cells.map((day, index) => {
-                if (day === null) {
-                  return <span key={`mobile-empty-${index}`} />;
-                }
-
-                const date = toDateKey(
-                  visibleMonth.year,
-                  visibleMonth.month,
-                  day,
-                );
-                const hasShifts = (shiftsByDate.get(date)?.length ?? 0) > 0;
-
-                return (
-                  <button
-                    key={date}
-                    type="button"
-                    onClick={() => selectDate(date)}
-                    aria-pressed={selectedDate === date}
-                    aria-label={`Select ${formatDate(date)} to create a shift`}
-                    className={`relative flex min-h-9 items-center justify-center rounded-lg text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-indigo-600 ${
-                      selectedDate === date
-                        ? "bg-indigo-600 text-white"
-                        : date === today
-                          ? "bg-indigo-100 text-indigo-800"
-                          : "bg-white text-slate-700 ring-1 ring-slate-200"
-                    }`}
-                  >
-                    {day}
-                    {hasShifts ? (
-                      <span
-                        aria-hidden="true"
-                        className={`absolute bottom-1 h-1 w-1 rounded-full ${
-                          selectedDate === date ? "bg-white" : "bg-indigo-500"
-                        }`}
-                      />
-                    ) : null}
-                  </button>
                 );
               })}
             </div>
-            {selectedDate ? <SelectedDateAction date={selectedDate} /> : null}
+
+            {monthShifts.length === 0 ? (
+              <div className="border-t border-slate-200 px-5 py-6 text-center text-sm text-slate-500">
+                No shifts to show for{" "}
+                {formatMonth(visibleMonth.year, visibleMonth.month)}.
+              </div>
+            ) : null}
           </div>
-        ) : null}
 
-        <div className="divide-y divide-slate-200 md:hidden">
-          {monthShifts.length === 0 ? (
-            <div className="px-5 py-10 text-center">
-              <AppIcon name="calendar" className="mx-auto h-7 w-7 text-slate-400" />
-              <p className="mt-3 text-sm font-medium text-slate-700">
-                No shifts match this month.
-              </p>
-            </div>
-          ) : (
-            monthShifts.map((shift) => {
-              const style = statusStyles[shift.status];
-              const isSelected = selectedShiftId === shift.id;
+          <div className="divide-y divide-slate-100 md:hidden">
+            {monthShifts.length === 0 ? (
+              <div className="px-5 py-10 text-center">
+                <AppIcon name="calendar" className="mx-auto h-7 w-7 text-slate-400" />
+                <p className="mt-3 text-sm font-medium text-slate-700">
+                  No shifts to show this month.
+                </p>
+              </div>
+            ) : (
+              monthShifts.map((shift) => {
+                const shiftDisplay = getDisplay(shift, isAdmin);
+                const isSelected = selectedShiftId === shift.id;
 
-              return (
-                <div key={shift.id} className="p-4">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      selectShift(shift.id, true);
-                    }}
-                    aria-expanded={isSelected}
-                    className={`w-full rounded-xl border p-3 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ${style.item} ${
-                      isSelected ? "ring-2 ring-indigo-500 ring-offset-2" : ""
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide opacity-70">
-                          {formatCompactDate(shift.date)}
-                        </p>
-                        <p className="mt-1 truncate font-semibold">
-                          {shift.eventName}
-                        </p>
-                        <p className="mt-1 text-sm opacity-80">
-                          {formatTime(shift.startTime)} – {formatTime(shift.endTime)}
-                        </p>
+                return (
+                  <div key={shift.id} className="p-3">
+                    <button
+                      type="button"
+                      onClick={() => selectShift(shift.id, true)}
+                      aria-expanded={isSelected}
+                      className={`w-full rounded-xl border p-3 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ${shiftDisplay.item} ${
+                        isSelected ? "ring-2 ring-indigo-500 ring-offset-2" : ""
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold uppercase tracking-wide opacity-70">
+                            {formatCompactDate(shift.date)}
+                          </p>
+                          <p className="mt-1 truncate font-semibold">
+                            {shift.eventName}
+                          </p>
+                          <p className="mt-1 text-sm opacity-80">
+                            {formatTime(shift.startTime)} – {formatTime(shift.endTime)}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-xs font-bold">
+                          {getChipLabel(shift, isAdmin)}
+                        </span>
                       </div>
-                      <span className="shrink-0 text-xs font-bold">
-                        {style.label}
-                      </span>
-                    </div>
-                  </button>
-                </div>
-              );
-            })
-          )}
-        </div>
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </section>
 
         {selectedShift ? (
           <aside
             aria-label="Selected shift details"
-            className="sticky top-24 hidden xl:block"
+            className="sticky top-24 hidden 2xl:block"
           >
             <ShiftDetails
               key={selectedShift.id}
@@ -827,7 +902,7 @@ export function CalendarView({
       </div>
 
       {selectedShift ? (
-        <div className="pointer-events-none fixed inset-0 z-50 xl:hidden">
+        <div className="pointer-events-none fixed inset-0 z-50 2xl:hidden">
           <button
             type="button"
             aria-label="Close shift details"
@@ -853,34 +928,37 @@ export function CalendarView({
 
       <section aria-labelledby="upcoming-heading" className="mt-8">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="page-eyebrow">Next up</p>
-            <h2 id="upcoming-heading" className="section-title mt-1">
-              Upcoming
-            </h2>
-          </div>
-          <p className="text-sm text-slate-500">
-            Assignments and responses that need your attention
-          </p>
+          <h2 id="upcoming-heading" className="section-title">
+            {isAdmin ? "Next shifts" : "Coming up"}
+          </h2>
+          {isAdmin ? (
+            <Link
+              href="/admin/shifts"
+              className="text-sm font-semibold text-indigo-700 hover:text-indigo-900"
+            >
+              See all shifts →
+            </Link>
+          ) : null}
         </div>
 
         {upcomingShifts.length === 0 ? (
           <div className="empty-state py-8">
             <p className="text-sm text-slate-600">
-              No assigned shifts or open availability items are coming up.
+              {isAdmin
+                ? "No upcoming shifts. Create one to get started."
+                : "Nothing coming up yet. New shifts will appear here."}
             </p>
           </div>
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
             {upcomingShifts.map((shift) => {
-              const style = statusStyles[shift.status];
+              const shiftDisplay = getDisplay(shift, isAdmin);
 
               return (
                 <button
                   key={shift.id}
                   type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
+                  onClick={() => {
                     const shiftDate = parseDateOnly(shift.date);
                     setVisibleMonth({
                       year: shiftDate.year,
@@ -895,16 +973,21 @@ export function CalendarView({
                       : ""
                   }`}
                 >
-                  <span className={`mt-1 h-3 w-3 shrink-0 rounded-full ${style.dot}`} />
+                  <span className={`mt-1.5 h-3 w-3 shrink-0 rounded-full ${shiftDisplay.dot}`} />
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-start justify-between gap-2">
                       <span className="font-semibold text-slate-950">
                         {shift.eventName}
                       </span>
-                      <StatusLabel status={shift.status} />
+                      <StatusBadge tone={shiftDisplay.tone}>
+                        {isAdmin && shift.coverage
+                          ? getStaffingLabel(shift.coverage)
+                          : shiftDisplay.label}
+                      </StatusBadge>
                     </span>
                     <span className="mt-1 block text-sm text-slate-600">
-                      {formatCompactDate(shift.date)} · {formatTime(shift.startTime)}
+                      {formatCompactDate(shift.date)} · {formatTime(shift.startTime)} –{" "}
+                      {formatTime(shift.endTime)}
                     </span>
                     {shift.location ? (
                       <span className="mt-1 block truncate text-xs text-slate-500">

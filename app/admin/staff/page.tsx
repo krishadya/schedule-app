@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AppIcon } from "@/components/ui/app-icon";
@@ -91,18 +90,12 @@ export default async function AdminStaffPage() {
       <div className="page-container">
         <header className="page-header">
           <div>
-            <p className="page-eyebrow">Staff administration</p>
-            <h1 className="page-title">Manage Staff</h1>
+            <p className="page-eyebrow">Team</p>
+            <h1 className="page-title">Staff</h1>
             <p className="page-description">
-              Create staff accounts and review the current staff roster.
+              Add people to your team, check their hours, and reset passwords.
             </p>
           </div>
-          <Link
-            href="/admin"
-            className="btn btn-secondary self-start"
-          >
-            Back to Admin Dashboard
-          </Link>
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start">

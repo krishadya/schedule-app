@@ -20,6 +20,13 @@ export type CalendarAvailability = {
   note: string | null;
 };
 
+export type CalendarCoverage = {
+  status: "fully_staffed" | "partially_staffed" | "unstaffed" | "no_requirements";
+  filled: number;
+  required: number;
+  open: number;
+};
+
 export type CalendarShift = {
   id: string;
   eventName: string;
@@ -33,4 +40,6 @@ export type CalendarShift = {
   availability: CalendarAvailability | null;
   assignedRole: string | null;
   status: CalendarStatus;
+  // Staffing coverage, only loaded for admins.
+  coverage: CalendarCoverage | null;
 };

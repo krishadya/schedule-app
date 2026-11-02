@@ -3,20 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { signOut } from "@/app/dashboard/actions";
 import type { ProfileRole } from "@/lib/auth/profile";
 import { AppIcon } from "./ui/app-icon";
 
 type NavigationItem = {
   href: string;
   label: string;
-  icon: "home" | "users" | "account" | "calendar" | "schedule" | "bell";
-};
-
-const notificationsItem: NavigationItem = {
-  href: "/notifications",
-  label: "Notifications",
-  icon: "bell",
+  icon: "home" | "users" | "account" | "calendar" | "schedule" | "bell" | "check";
 };
 
 const dashboardItem: NavigationItem = {
@@ -26,23 +19,33 @@ const dashboardItem: NavigationItem = {
 };
 const accountItem: NavigationItem = {
   href: "/account",
-  label: "My Account",
+  label: "Account",
   icon: "account",
+};
+const notificationsItem: NavigationItem = {
+  href: "/notifications",
+  label: "Notifications",
+  icon: "bell",
 };
 
 const navigationByRole: Record<ProfileRole, NavigationItem[]> = {
   admin: [
     dashboardItem,
-    { href: "/admin", label: "Admin", icon: "users" },
+    { href: "/admin/shifts", label: "Shifts", icon: "calendar" },
+    { href: "/admin/staff", label: "Staff", icon: "users" },
     accountItem,
   ],
   staff: [
     dashboardItem,
-    { href: "/shifts", label: "Shifts", icon: "calendar" },
+    { href: "/shifts", label: "Availability", icon: "check" },
     { href: "/schedule", label: "My Schedule", icon: "schedule" },
     accountItem,
   ],
 };
+
+function isActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function AuthenticatedNavigation({
   role,
@@ -57,26 +60,21 @@ export function AuthenticatedNavigation({
   const items = navigationByRole[role];
 
   if (variant === "mobile") {
+    // Notifications live in the top bar's bell on mobile; sign out is on
+    // the Account page.
     return (
       <nav aria-label="Mobile navigation" className="w-full">
-        <ul
-          className={`grid items-stretch ${
-            items.length === 4 ? "grid-cols-5" : "grid-cols-4"
-          }`}
-        >
+        <ul className="grid grid-cols-4 items-stretch">
           {items.map((item) => {
-            const isActive =
-              item.href === "/admin"
-                ? pathname.startsWith("/admin")
-                : pathname === item.href;
+            const active = isActive(pathname, item.href);
 
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  aria-current={isActive ? "page" : undefined}
+                  aria-current={active ? "page" : undefined}
                   className={`flex min-h-16 flex-col items-center justify-center gap-1 border-t-2 px-1 text-[11px] font-semibold transition focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-indigo-600 ${
-                    isActive
+                    active
                       ? "border-indigo-600 bg-indigo-50 text-indigo-700"
                       : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                   }`}
@@ -87,41 +85,30 @@ export function AuthenticatedNavigation({
               </li>
             );
           })}
-          <li>
-            <form action={signOut} className="h-full">
-              <button
-                type="submit"
-                className="flex min-h-16 w-full flex-col items-center justify-center gap-1 border-t-2 border-transparent px-1 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-indigo-600"
-              >
-                <AppIcon name="logout" className="h-5 w-5" />
-                Sign Out
-              </button>
-            </form>
-          </li>
         </ul>
       </nav>
     );
   }
 
-  // The mobile bar shows a bell in the top header instead.
-  const sidebarItems = [items[0], notificationsItem, ...items.slice(1)];
+  const sidebarItems = [
+    ...items.slice(0, -1),
+    notificationsItem,
+    items[items.length - 1],
+  ];
 
   return (
     <nav aria-label="Main navigation" className="mt-8 min-w-0 flex-1">
-      <ul className="space-y-2">
+      <ul className="space-y-1.5">
         {sidebarItems.map((item) => {
-          const isActive =
-            item.href === "/admin"
-              ? pathname.startsWith("/admin")
-              : pathname === item.href;
+          const active = isActive(pathname, item.href);
 
           return (
             <li key={item.href}>
               <Link
                 href={item.href}
-                aria-current={isActive ? "page" : undefined}
-                className={`flex min-h-12 items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-                  isActive
+                aria-current={active ? "page" : undefined}
+                className={`flex min-h-11 items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                  active
                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-950/20"
                     : "text-slate-300 hover:bg-white/10 hover:text-white"
                 }`}
