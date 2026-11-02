@@ -247,24 +247,56 @@ function collectText(node) {
   return collectText(node.props?.children);
 }
 
-function loadAdminShiftsPage({ role = "admin", shifts = [], todayKey = "2026-11-02" } = {}) {
+function loadAdminShiftsPage({
+  role = "admin",
+  upcoming = [],
+  past = [],
+  pastCount = past.length,
+  todayKey = "2026-11-02",
+} = {}) {
   const { filename, outputText } = compile("app/admin/shifts/page.tsx", true);
   const exports = {};
-  const query = { tables: [], selected: null, adminClientUsed: false };
+  const queries = [];
   const MetricCard = function MetricCard() {};
   const StatusBadge = function StatusBadge() {};
-  const queryBuilder = {
-    select(columns) {
-      query.selected = columns;
-      return queryBuilder;
-    },
-    order() {
-      return queryBuilder;
-    },
-    then(resolveResult) {
-      resolveResult({ data: shifts, error: null });
-    },
-  };
+
+  function createQuery(table) {
+    const query = { table, filters: [], orders: [], limit: null, head: false };
+    queries.push(query);
+    const builder = {
+      select(columns, options) {
+        query.selected = columns;
+        query.head = Boolean(options?.head);
+        return builder;
+      },
+      gte(column, value) {
+        query.filters.push(["gte", column, value]);
+        return builder;
+      },
+      lt(column, value) {
+        query.filters.push(["lt", column, value]);
+        return builder;
+      },
+      order(column, options) {
+        query.orders.push([column, options.ascending]);
+        return builder;
+      },
+      limit(value) {
+        query.limit = value;
+        return builder;
+      },
+      then(resolveResult) {
+        if (query.head) {
+          resolveResult({ data: null, count: pastCount, error: null });
+        } else if (query.filters.some(([op]) => op === "lt")) {
+          resolveResult({ data: past, error: null });
+        } else {
+          resolveResult({ data: upcoming, error: null });
+        }
+      },
+    };
+    return builder;
+  }
 
   runInNewContext(outputText, {
     exports,
@@ -273,6 +305,7 @@ function loadAdminShiftsPage({ role = "admin", shifts = [], todayKey = "2026-11-
     Number,
     Array,
     Map,
+    Promise,
     require(name) {
       if (name === "react/jsx-runtime") {
         return {
@@ -316,23 +349,15 @@ function loadAdminShiftsPage({ role = "admin", shifts = [], todayKey = "2026-11-
       if (name === "@/lib/supabase/server") {
         return {
           async createClient() {
-            return {
-              from(table) {
-                query.tables.push(table);
-                return queryBuilder;
-              },
-            };
+            return { from: createQuery };
           },
         };
-      }
-      if (name === "@/lib/supabase/admin") {
-        query.adminClientUsed = true;
       }
       throw new Error(`Unexpected import: ${name}`);
     },
   }, { filename });
 
-  return { page: exports.default, MetricCard, StatusBadge, query };
+  return { page: exports.default, MetricCard, StatusBadge, queries };
 }
 
 function shiftRow(id, date, requirements, assignedRoles) {
@@ -348,36 +373,55 @@ function shiftRow(id, date, requirements, assignedRoles) {
   };
 }
 
-test("admin shifts page loads coverage in one query without staff details", async () => {
-  const context = loadAdminShiftsPage();
-  await context.page({ searchParams: Promise.resolve({}) });
+const upcomingRows = [
+  shiftRow("today", "2026-11-02", [{ role: "Technician", staff_needed: 2 }], ["Technician", "Technician"]),
+  shiftRow(
+    "partial",
+    "2026-11-05",
+    [
+      { role: "Technician", staff_needed: 2 },
+      { role: "Event Assistant", staff_needed: 3 },
+    ],
+    ["Technician", "Technician", "Event Assistant"],
+  ),
+  shiftRow("empty", "2026-11-06", [{ role: "Usher", staff_needed: 1 }], []),
+  shiftRow("none", "2026-11-07", [], []),
+];
 
-  assert.deepEqual(context.query.tables, ["shifts"]);
-  assert.match(context.query.selected, /assignments\s*\(\s*assigned_role\s*\)/);
-  assert.doesNotMatch(context.query.selected, /availability_responses|profiles|user_id/);
-  assert.equal(context.query.adminClientUsed, false);
+function render(context, searchParams = {}) {
+  return context.page({ searchParams: Promise.resolve(searchParams) });
+}
+
+function badgesOf(context, result) {
+  return findAll(result, context.StatusBadge).map((badge) => ({
+    tone: badge.props.tone,
+    text: collectText(badge.props.children),
+  }));
+}
+
+function shiftTitles(result) {
+  return findAll(result, "article").map((article) =>
+    collectText(findAll(article, "h2")[0]),
+  );
+}
+
+test("admin shifts page only queries shifts, without staff details", async () => {
+  const context = loadAdminShiftsPage({ upcoming: upcomingRows });
+  await render(context);
+
+  assert.ok(context.queries.length > 0);
+  for (const query of context.queries) {
+    assert.equal(query.table, "shifts");
+    assert.doesNotMatch(query.selected, /availability_responses|profiles|user_id/);
+  }
+  const listQuery = context.queries.find((query) => !query.head);
+  assert.match(listQuery.selected, /assignments\s*\(\s*assigned_role\s*\)/);
+  assert.deepEqual(plain(listQuery.filters), [["gte", "date", "2026-11-02"]]);
 });
 
-test("admin shifts page summarizes upcoming coverage and badges only upcoming shifts", async () => {
-  const context = loadAdminShiftsPage({
-    todayKey: "2026-11-02",
-    shifts: [
-      shiftRow("past", "2026-11-01", [{ role: "Technician", staff_needed: 2 }], []),
-      shiftRow("today", "2026-11-02", [{ role: "Technician", staff_needed: 2 }], ["Technician", "Technician"]),
-      shiftRow(
-        "partial",
-        "2026-11-05",
-        [
-          { role: "Technician", staff_needed: 2 },
-          { role: "Event Assistant", staff_needed: 3 },
-        ],
-        ["Technician", "Technician", "Event Assistant"],
-      ),
-      shiftRow("empty", "2026-11-06", [{ role: "Usher", staff_needed: 1 }], []),
-      shiftRow("none", "2026-11-07", [], []),
-    ],
-  });
-  const result = await context.page({ searchParams: Promise.resolve({}) });
+test("admin shifts page summarizes all upcoming coverage", async () => {
+  const context = loadAdminShiftsPage({ upcoming: upcomingRows, pastCount: 3 });
+  const result = await render(context);
 
   const metrics = Object.fromEntries(
     findAll(result, context.MetricCard).map((card) => [
@@ -392,11 +436,7 @@ test("admin shifts page summarizes upcoming coverage and badges only upcoming sh
     "Open slots": 3,
   });
 
-  const badges = findAll(result, context.StatusBadge).map((badge) => ({
-    tone: badge.props.tone,
-    text: collectText(badge.props.children),
-  }));
-  assert.deepEqual(badges, [
+  assert.deepEqual(badgesOf(context, result), [
     { tone: "emerald", text: "Fully staffed · 2 / 2" },
     { tone: "amber", text: "3 / 5 staffed · 2 open slots" },
     { tone: "slate", text: "0 / 1 staffed · 1 open slot" },
@@ -406,14 +446,67 @@ test("admin shifts page summarizes upcoming coverage and badges only upcoming sh
   const text = collectText(result);
   assert.match(text, /All shifts from Mon, Nov 2, 2026 onward \(Pacific time\)/);
   assert.match(text, /1 upcoming shift has no staffing requirements/);
+  assert.match(text, /Upcoming4/);
+  assert.match(text, /Needs staff2/);
+  assert.match(text, /Past3/);
+  assert.match(text, /Event Assistant 1 \/ 3/);
+});
+
+test("needs-staff view lists only shifts with open slots", async () => {
+  const context = loadAdminShiftsPage({ upcoming: upcomingRows });
+  const result = await render(context, { view: "needs-staff" });
+
+  assert.deepEqual(shiftTitles(result), ["Event partial", "Event empty"]);
+  // The summary still covers every upcoming shift.
+  const upcomingCard = findAll(result, context.MetricCard).find(
+    (card) => card.props.label === "Upcoming shifts",
+  );
+  assert.equal(upcomingCard.props.value, 4);
+});
+
+test("past view loads recent past shifts newest first without coverage badges", async () => {
+  const past = [
+    shiftRow("yesterday", "2026-11-01", [{ role: "Technician", staff_needed: 2 }], ["Technician"]),
+    shiftRow("last-week", "2026-10-26", [{ role: "Technician", staff_needed: 1 }], []),
+  ];
+  const context = loadAdminShiftsPage({ upcoming: upcomingRows, past, pastCount: 75 });
+  const result = await render(context, { view: "past" });
+
+  const pastQuery = context.queries.find(
+    (query) => !query.head && query.filters.some(([op]) => op === "lt"),
+  );
+  assert.ok(pastQuery);
+  assert.equal(pastQuery.limit, 50);
+  assert.deepEqual(plain(pastQuery.orders), [
+    ["date", false],
+    ["start_time", false],
+  ]);
+
+  assert.deepEqual(shiftTitles(result), ["Event yesterday", "Event last-week"]);
+  assert.deepEqual(badgesOf(context, result), []);
+  assert.match(collectText(result), /Showing the 50 most recent of 75 past shifts/);
+});
+
+test("past shifts are not loaded unless the past view is open", async () => {
+  const context = loadAdminShiftsPage({ upcoming: upcomingRows, pastCount: 5 });
+  await render(context);
+
+  const pastListQuery = context.queries.find(
+    (query) => !query.head && query.filters.some(([op]) => op === "lt"),
+  );
+  assert.equal(pastListQuery, undefined);
+});
+
+test("unknown views fall back to upcoming", async () => {
+  const context = loadAdminShiftsPage({ upcoming: upcomingRows });
+  const result = await render(context, { view: "everything" });
+
+  assert.equal(shiftTitles(result).length, 4);
 });
 
 test("admin shifts page still redirects staff members", async () => {
   const context = loadAdminShiftsPage({ role: "staff" });
 
-  await assert.rejects(
-    context.page({ searchParams: Promise.resolve({}) }),
-    /REDIRECT:\/dashboard/,
-  );
-  assert.deepEqual(context.query.tables, []);
+  await assert.rejects(render(context), /REDIRECT:\/dashboard/);
+  assert.deepEqual(context.queries, []);
 });
