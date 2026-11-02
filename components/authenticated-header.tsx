@@ -9,10 +9,33 @@ import { AppLogo } from "./ui/app-logo";
 import { AppIcon } from "./ui/app-icon";
 import { UserAvatar } from "./ui/user-avatar";
 
+function NotificationBell({ count }: { count: number }) {
+  return (
+    <Link
+      href="/notifications"
+      aria-label={
+        count > 0
+          ? `Notifications, ${count} need${count === 1 ? "s" : ""} attention`
+          : "Notifications"
+      }
+      className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+    >
+      <AppIcon name="bell" className="h-5 w-5" />
+      {count > 0 ? (
+        <span className="absolute right-0.5 top-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white tabular-nums">
+          {count > 9 ? "9+" : count}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
 export function AuthenticatedHeader({
   profile,
+  notificationCount,
 }: {
   profile: AuthenticatedProfile;
+  notificationCount: number;
 }) {
   return (
     <div className="contents">
@@ -25,7 +48,11 @@ export function AuthenticatedHeader({
           <AppLogo compact inverse subtitle />
         </Link>
 
-        <AuthenticatedNavigation role={profile.role} variant="sidebar" />
+        <AuthenticatedNavigation
+          role={profile.role}
+          variant="sidebar"
+          notificationCount={notificationCount}
+        />
 
         <Link
           href="/account"
@@ -65,17 +92,20 @@ export function AuthenticatedHeader({
         >
           <AppLogo compact />
         </Link>
-        <Link
-          href="/account"
-          aria-label="Open My Account"
-          className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-        >
-          <UserAvatar
-            name={profile.full_name}
-            src={profile.avatar_url}
-            size="sm"
-          />
-        </Link>
+        <div className="flex items-center gap-1">
+          <NotificationBell count={notificationCount} />
+          <Link
+            href="/account"
+            aria-label="Open My Account"
+            className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          >
+            <UserAvatar
+              name={profile.full_name}
+              src={profile.avatar_url}
+              size="sm"
+            />
+          </Link>
+        </div>
       </header>
 
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden">

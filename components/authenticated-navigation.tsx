@@ -10,7 +10,13 @@ import { AppIcon } from "./ui/app-icon";
 type NavigationItem = {
   href: string;
   label: string;
-  icon: "home" | "users" | "account" | "calendar" | "schedule";
+  icon: "home" | "users" | "account" | "calendar" | "schedule" | "bell";
+};
+
+const notificationsItem: NavigationItem = {
+  href: "/notifications",
+  label: "Notifications",
+  icon: "bell",
 };
 
 const dashboardItem: NavigationItem = {
@@ -41,9 +47,11 @@ const navigationByRole: Record<ProfileRole, NavigationItem[]> = {
 export function AuthenticatedNavigation({
   role,
   variant,
+  notificationCount = 0,
 }: {
   role: ProfileRole;
   variant: "sidebar" | "mobile";
+  notificationCount?: number;
 }) {
   const pathname = usePathname();
   const items = navigationByRole[role];
@@ -95,10 +103,13 @@ export function AuthenticatedNavigation({
     );
   }
 
+  // The mobile bar shows a bell in the top header instead.
+  const sidebarItems = [items[0], notificationsItem, ...items.slice(1)];
+
   return (
     <nav aria-label="Main navigation" className="mt-8 min-w-0 flex-1">
       <ul className="space-y-2">
-        {items.map((item) => {
+        {sidebarItems.map((item) => {
           const isActive =
             item.href === "/admin"
               ? pathname.startsWith("/admin")
@@ -117,6 +128,11 @@ export function AuthenticatedNavigation({
               >
                 <AppIcon name={item.icon} className="h-5 w-5" />
                 {item.label}
+                {item === notificationsItem && notificationCount > 0 ? (
+                  <span className="ml-auto rounded-full bg-rose-500 px-2 py-0.5 text-xs font-bold tabular-nums text-white">
+                    {notificationCount}
+                  </span>
+                ) : null}
               </Link>
             </li>
           );
