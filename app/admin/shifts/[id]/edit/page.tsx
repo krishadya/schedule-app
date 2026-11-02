@@ -22,12 +22,14 @@ export default async function EditShiftPage({ params }: { params: Promise<{ id: 
     <main className="page-shell">
       <div className="mx-auto max-w-4xl">
         <header className="page-header">
-          <p className="page-eyebrow">Shift management</p>
-          <h1 className="page-title">Edit Shift</h1>
-          <p className="page-description">
-            Roles with assigned staff must be retained, with enough spaces for
-            their assignments.
-          </p>
+          <div>
+            <p className="page-eyebrow">Shifts</p>
+            <h1 className="page-title">Edit Shift</h1>
+            <p className="page-description">
+              To remove a role or lower its count, first unassign the people in
+              it.
+            </p>
+          </div>
         </header>
         <ShiftForm
           action={editShift.bind(null, shift.id, shift.updated_at)}

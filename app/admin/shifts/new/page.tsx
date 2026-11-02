@@ -1,4 +1,7 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+
+import { AppIcon } from "@/components/ui/app-icon";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import { CreateShiftForm } from "./create-shift-form";
@@ -97,15 +100,26 @@ export default async function NewShiftPage({
     <main className="page-shell">
       <div className="mx-auto max-w-4xl">
         <header className="page-header">
-          <p className="page-eyebrow">Shift management</p>
-          <h1 className="page-title">
-            {duplicateSource ? "Duplicate Shift" : "Create Shift"}
-          </h1>
-          <p className="page-description">
-            {duplicateSource
-              ? "Review the copied details and choose new scheduling information."
-              : "Add event details, response timing, and staffing requirements."}
-          </p>
+          <div>
+            <p className="page-eyebrow">Shifts</p>
+            <h1 className="page-title">
+              {duplicateSource ? "Duplicate Shift" : "New Shift"}
+            </h1>
+            <p className="page-description">
+              {duplicateSource
+                ? "Everything is copied except the date and answer deadline. Pick those, then save."
+                : "Fill in the event, when it happens, and how many people you need."}
+            </p>
+          </div>
+          {duplicateSource ? null : (
+            <Link
+              href="/admin/shifts/recurring"
+              className="btn btn-secondary self-start"
+            >
+              <AppIcon name="schedule" className="h-4 w-4" />
+              Repeats? Create a series
+            </Link>
+          )}
         </header>
 
         {duplicateSource ? (

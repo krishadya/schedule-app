@@ -105,6 +105,12 @@ function loadNewShiftPage({ role = "admin", shift = null, queryError = null } = 
       if (name === "./create-shift-form") {
         return { CreateShiftForm };
       }
+      if (name === "next/link") {
+        return { default: function Link() {} };
+      }
+      if (name === "@/components/ui/app-icon") {
+        return { AppIcon: function AppIcon() {} };
+      }
       throw new Error(`Unexpected import: ${name}`);
     },
   }, { filename });

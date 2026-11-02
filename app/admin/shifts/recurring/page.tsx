@@ -15,11 +15,11 @@ export default async function RecurringShiftsPage() {
       <div className="mx-auto max-w-4xl">
         <header className="page-header">
           <div>
-            <p className="page-eyebrow">Shift management</p>
-            <h1 className="page-title">Create Recurring Shifts</h1>
+            <p className="page-eyebrow">Shifts</p>
+            <h1 className="page-title">Recurring Shifts</h1>
             <p className="page-description">
-              Enter the shared details for a shift that repeats across a date
-              range, preview every occurrence, and create them together.
+              Create the same shift on several days at once. Pick the dates and
+              weekdays, preview the list, then save them all together.
             </p>
           </div>
         </header>
