@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { usernameToLoginEmail } from "@/lib/auth/login-email";
 
 export type LoginState = {
   error: string | null;
@@ -37,7 +38,7 @@ export async function login(
   try {
     const supabase = await createClient();
     const { error } = await supabase.auth.signInWithPassword({
-      email: `${normalizedUsername}@vernon.local`,
+      email: usernameToLoginEmail(normalizedUsername),
       password,
     });
 

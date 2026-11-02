@@ -9,6 +9,21 @@ const root = process.cwd();
 const shiftId = "11111111-1111-4111-8111-111111111111";
 const profileId = "22222222-2222-4222-8222-222222222222";
 
+function loadLoginEmailHelper() {
+  const filename = resolve(root, "lib/auth/login-email.ts");
+  const compiled = ts.transpileModule(readFileSync(filename, "utf8"), {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText;
+  const exports = {};
+  runInNewContext(compiled, { exports }, { filename });
+  return exports;
+}
+
+const loginEmailHelper = loadLoginEmailHelper();
+
 function loadModule(relativePath, mocks = {}) {
   const filename = resolve(root, relativePath);
   const compiled = ts.transpileModule(readFileSync(filename, "utf8"), {
@@ -26,6 +41,7 @@ function loadModule(relativePath, mocks = {}) {
     Set,
     require(name) {
       if (name in mocks) return mocks[name];
+      if (name === "@/lib/auth/login-email") return loginEmailHelper;
       throw new Error(`Unexpected import: ${name}`);
     },
   }, { filename });
@@ -85,7 +101,7 @@ test("login normalizes usernames and only sends the synthetic email to Supabase"
     login({}, loginForm("  Staff.User  ", "private-password")),
     { message: "REDIRECT:/dashboard" },
   );
-  assert.equal(credentials.email, "staff.user@vernon.local");
+  assert.equal(credentials.email, "staff.user@schedule.local");
   assert.equal(credentials.password, "private-password");
 });
 

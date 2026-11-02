@@ -105,7 +105,7 @@ There is no public sign-up. Staff accounts are created by an admin, so the
 first admin is created by hand:
 
 1. In Supabase go to **Authentication → Users → Add user → Create new user**.
-2. Email: `yourname@vernon.local` (see the note below), choose a password, and
+2. Email: `yourname@schedule.local` (see the note below), choose a password, and
    check **Auto Confirm User**.
 3. In **SQL Editor**, promote that account:
 
@@ -119,7 +119,7 @@ first admin is created by hand:
    staff from **Admin → Manage Staff**.
 
 **Note on usernames:** people sign in with a username, not an email.
-Internally each username maps to a placeholder email `username@vernon.local`
+Internally each username maps to a placeholder email `username@schedule.local`
 in Supabase Auth. These addresses never receive mail. That's why
 notifications are in-app.
 

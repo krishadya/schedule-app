@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { usernameToLoginEmail } from "@/lib/auth/login-email";
 
 export type ChangePasswordActionState = {
   status: "idle" | "success" | "error";
@@ -141,7 +142,7 @@ export async function updateProfile(
       const { error } = await adminSupabase.auth.admin.updateUserById(
         profile.id,
         {
-          email: `${username}@vernon.local`,
+          email: usernameToLoginEmail(username),
           email_confirm: true,
           user_metadata: {
             username,

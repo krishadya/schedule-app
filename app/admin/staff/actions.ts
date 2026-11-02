@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { usernameToLoginEmail } from "@/lib/auth/login-email";
 
 export type CreateStaffActionState = {
   status: "idle" | "success" | "error";
@@ -95,7 +96,7 @@ export async function createStaffAccount(
     }
 
     const { error: createError } = await adminSupabase.auth.admin.createUser({
-      email: `${username}@vernon.local`,
+      email: usernameToLoginEmail(username),
       password,
       email_confirm: true,
       user_metadata: {

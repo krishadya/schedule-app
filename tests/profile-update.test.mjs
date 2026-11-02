@@ -8,6 +8,21 @@ import ts from "typescript";
 const root = process.cwd();
 const profileId = "22222222-2222-4222-8222-222222222222";
 
+function loadLoginEmailHelper() {
+  const filename = resolve(root, "lib/auth/login-email.ts");
+  const compiled = ts.transpileModule(readFileSync(filename, "utf8"), {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText;
+  const exports = {};
+  runInNewContext(compiled, { exports }, { filename });
+  return exports;
+}
+
+const loginEmailHelper = loadLoginEmailHelper();
+
 function loadActions(mocks) {
   const filename = resolve(root, "app/account/actions.ts");
   const compiled = ts.transpileModule(readFileSync(filename, "utf8"), {
@@ -26,6 +41,7 @@ function loadActions(mocks) {
     require(name) {
       if (name === "server-only") return {};
       if (name in mocks) return mocks[name];
+      if (name === "@/lib/auth/login-email") return loginEmailHelper;
       throw new Error(`Unexpected import: ${name}`);
     },
   }, { filename });
@@ -104,7 +120,7 @@ test("profile updates normalize the username and synchronize the internal Auth e
   assert.equal(writes[0].valueId, profileId);
   assert.equal(authUpdates.length, 1);
   assert.equal(authUpdates[0].id, profileId);
-  assert.equal(authUpdates[0].attributes.email, "new.user@vernon.local");
+  assert.equal(authUpdates[0].attributes.email, "new.user@schedule.local");
   assert.ok(revalidated.some(([path, type]) => path === "/" && type === "layout"));
 });
 

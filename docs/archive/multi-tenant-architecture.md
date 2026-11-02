@@ -17,7 +17,7 @@ The migration must be additive first. Create a single legacy organization, place
 - `auth.users.id` and `public.profiles.id` are a one-to-one global identity.
 - `private.handle_new_user()` creates one global profile and defaults `profiles.role` to `staff`.
 - Usernames are globally unique, lowercase, and limited to `[a-z0-9._-]`.
-- Login converts a username to `username@vernon.local` and calls Supabase password authentication.
+- Login converts a username to `username@<domain>.local` and calls Supabase password authentication.
 - A username change first updates `profiles`, then uses the service-role Auth Admin API to change the synthetic email. The two systems are compensated on error but are not one transaction.
 - `getAuthenticatedProfile()` returns a global `admin` or `staff` role. Pages and Server Actions use that value as their authorization decision.
 - There is no active-organization context, organization selector, organization identifier in a route, or membership lookup.
@@ -74,7 +74,7 @@ Avatar write policies are identity-scoped and do not currently permit an admin t
 3. **Permissive cross-tenant read policies:** all authenticated users can read all shifts and requirements.
 4. **No relational tenant integrity:** a shift, responding user, assigned user, assigner, and requirement can only be correlated by application logic.
 5. **No multi-membership identity model:** creating a staff account always creates a new global identity instead of adding an existing person to an organization.
-6. **Brand-coupled login:** `@vernon.local` is global, non-deliverable, tied to one customer name, and incompatible with ordinary recovery and identity verification.
+6. **Brand-coupled login:** `@<domain>.local` is global, non-deliverable, tied to one customer name, and incompatible with ordinary recovery and identity verification.
 7. **Global timezone:** current/upcoming boundaries and display assume Los Angeles.
 8. **Service-role scope:** Auth Admin calls bypass RLS and currently rely on a global admin check.
 9. **Public avatar reads:** current avatars are not confidential even though object writes are owner-only.
@@ -260,7 +260,7 @@ Do not change current login during the tenant data migration. Existing `auth.use
 
 Username uniqueness must remain global while login maps a username without an organization qualifier. Allowing the same username in two organizations before changing login would make authentication ambiguous.
 
-### Limitations of `@vernon.local`
+### Limitations of `@<domain>.local`
 
 - It embeds one customer's name in a future shared product.
 - `.local` is not a deliverable email domain, so normal verification and recovery cannot work.
@@ -275,7 +275,7 @@ Use one organization-independent identity per person, preferably a real verified
 
 If a no-email visible login must remain, introduce a global login-identity mapping and use a stable product-owned synthetic identifier unrelated to an organization (for example, based on the Auth user UUID). The server can resolve a normalized global handle before password authentication. That flow requires enumeration protection, rate limiting, recovery design, and careful non-transactional identity updates. Do not use an organization slug in the synthetic email, because a multi-organization person must still have one identity.
 
-During a later identity migration, continue accepting the legacy username mapping, attach the new verified identity to the same Auth user where supported, and preserve `auth.users.id`. Only retire `@vernon.local` after all existing users have a tested replacement credential/recovery path.
+During a later identity migration, continue accepting the legacy username mapping, attach the new verified identity to the same Auth user where supported, and preserve `auth.users.id`. Only retire `@<domain>.local` after all existing users have a tested replacement credential/recovery path.
 
 ## Privileged Auth Admin rules in the target system
 
