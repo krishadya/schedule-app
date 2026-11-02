@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
+
+import { toAppDateTimeInput } from "@/lib/date";
 import Link from "next/link";
 import type { ActionState } from "./actions";
 import {
@@ -29,20 +31,6 @@ export type ShiftFormValues = {
 
 type EditableShiftFields = Omit<ShiftFormValues, "requirements">;
 
-function formatDeadlineForInput(value: string) {
-  const deadline = new Date(value);
-
-  if (Number.isNaN(deadline.getTime())) {
-    return value;
-  }
-
-  const localDeadline = new Date(
-    deadline.getTime() - deadline.getTimezoneOffset() * 60_000,
-  );
-
-  return localDeadline.toISOString().slice(0, 19);
-}
-
 export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/admin/shifts", mode }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   initialValues?: ShiftFormValues;
@@ -58,7 +46,7 @@ export function ShiftForm({ action, initialValues, initialDate, cancelHref = "/a
     endTime: initialValues?.endTime ?? "",
     location: initialValues?.location ?? "",
     responseDeadline: initialValues
-      ? formatDeadlineForInput(initialValues.responseDeadline)
+      ? toAppDateTimeInput(initialValues.responseDeadline)
       : "",
     notes: initialValues?.notes ?? "",
   }));

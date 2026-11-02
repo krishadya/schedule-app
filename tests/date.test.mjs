@@ -46,3 +46,9 @@ test("application dates respect daylight-saving boundaries", () => {
     "2026-01-15",
   );
 });
+
+test("datetime inputs show the deadline in Pacific time on any server", () => {
+  assert.equal(dateHelpers.toAppDateTimeInput("2026-11-04T01:00:00Z"), "2026-11-03T17:00");
+  assert.equal(dateHelpers.toAppDateTimeInput("2026-07-15T19:30:00Z"), "2026-07-15T12:30");
+  assert.equal(dateHelpers.toAppDateTimeInput("2026-11-04T08:00:00Z"), "2026-11-04T00:00");
+});

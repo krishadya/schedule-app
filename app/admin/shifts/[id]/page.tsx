@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppIcon } from "@/components/ui/app-icon";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
+import { APP_TIME_ZONE } from "@/lib/date";
 import {
   findAssignmentConflicts,
   type ConflictingShift,
@@ -68,11 +69,13 @@ const deadlineDateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
   year: "numeric",
+  timeZone: APP_TIME_ZONE,
 });
 
 const deadlineTimeFormatter = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
   minute: "2-digit",
+  timeZone: APP_TIME_ZONE,
 });
 
 function isAvailabilityResponse(value: string): value is AvailabilityResponse {
