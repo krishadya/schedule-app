@@ -1,6 +1,6 @@
 # Schedule App
 
-[![CI](https://github.com/krishadya/vernon-schedule-system/actions/workflows/ci.yml/badge.svg)](https://github.com/krishadya/vernon-schedule-system/actions/workflows/ci.yml)
+[![CI](https://github.com/krishadya/schedule-app/actions/workflows/ci.yml/badge.svg)](https://github.com/krishadya/schedule-app/actions/workflows/ci.yml)
 
 A self-hosted staff scheduling app for small event teams. Managers post shifts,
 staff say whether they can work, and managers assign people to roles.
