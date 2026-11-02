@@ -181,10 +181,10 @@ export default async function AdminShiftsPage({
       <div className="page-container">
         <header className="page-header">
           <div>
-            <p className="page-eyebrow">Shift management</p>
+            <p className="page-eyebrow">Scheduling</p>
             <h1 className="page-title">Shifts</h1>
             <p className="page-description">
-              Review event staffing, responses, and assignments.
+              See which shifts still need people, and open one to assign staff.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -193,14 +193,14 @@ export default async function AdminShiftsPage({
               className="btn btn-secondary"
             >
               <AppIcon name="schedule" className="h-4 w-4" />
-              Create Recurring Shifts
+              Recurring Shifts
             </Link>
             <Link
               href="/admin/shifts/new"
               className="btn btn-primary"
             >
               <AppIcon name="plus" className="h-4 w-4" />
-              Create Shift
+              New Shift
             </Link>
           </div>
         </header>

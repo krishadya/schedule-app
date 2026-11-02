@@ -14,7 +14,6 @@ import { createClient } from "@supabase/supabase-js";
 
 const TIME_ZONE = "America/Los_Angeles";
 const LOGIN_EMAIL_DOMAIN = "schedule.local";
-const DAY = 24 * 60 * 60 * 1000;
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -74,8 +73,16 @@ function addDays(dateKey, days) {
 }
 
 const today = todayKey();
-const now = Date.now();
-const deadlineIn = (days) => new Date(now + days * DAY).toISOString();
+// Deadlines land at 5 PM Pacific on the day `days` from today.
+function deadlineIn(days) {
+  const date = addDays(today, days);
+  const noonUtc = new Date(`${date}T12:00:00Z`);
+  const pacificHour = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, hour: "numeric", hourCycle: "h23" }).format(noonUtc),
+  );
+  const offsetHours = 12 - pacificHour; // 8 in winter, 7 in summer
+  return new Date(Date.UTC(...date.split("-").map((v, i) => (i === 1 ? Number(v) - 1 : Number(v))), 17 + offsetHours)).toISOString();
+}
 
 // People ----------------------------------------------------------------
 
