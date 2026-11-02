@@ -135,7 +135,7 @@ export function ProfileForm({
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              pattern="[A-Za-z0-9._-]+"
+              pattern="[A-Za-z0-9._\-]+"
               required
               className="form-input lowercase"
             />

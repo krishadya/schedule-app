@@ -44,7 +44,7 @@ export function LoginForm() {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              pattern="[A-Za-z0-9._-]+"
+              pattern="[A-Za-z0-9._\-]+"
               title="Use only letters, numbers, underscores, dots, and hyphens."
               placeholder="your_username"
               disabled={isPending}
