@@ -28,9 +28,9 @@ const responseOptions: Array<{
   label: string;
   description: string;
 }> = [
-  { value: "yes", label: "Yes", description: "I can work" },
-  { value: "maybe", label: "Maybe", description: "With limits" },
-  { value: "no", label: "No", description: "Unavailable" },
+  { value: "yes", label: "Yes", description: "I can work the whole shift" },
+  { value: "maybe", label: "Maybe", description: "Only part of it" },
+  { value: "no", label: "No", description: "I can't work" },
 ];
 
 const initialState: AvailabilityActionState = {
@@ -95,13 +95,17 @@ export function AvailabilityForm({
   );
 
   if (deadlinePassed) {
+    // The card's badge already says there was no answer.
+    if (!initialAvailability) {
+      return null;
+    }
+
     return (
       <section className="mt-5 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-slate-900">
-            Your availability
-          </h3>
-          <StatusBadge>Responses closed</StatusBadge>
+          <h4 className="text-sm font-semibold text-slate-900">
+            Your answer
+          </h4>
         </div>
 
         {initialAvailability ? (
@@ -140,7 +144,7 @@ export function AvailabilityForm({
           </div>
         ) : (
           <p className="mt-3 text-sm text-slate-600">
-            No response was submitted before the deadline.
+            You didn&apos;t answer before the deadline.
           </p>
         )}
       </section>
@@ -151,26 +155,7 @@ export function AvailabilityForm({
     <form action={formAction} className="mt-5 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
       <input type="hidden" name="shiftId" value={shiftId} />
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-slate-900">
-          Your availability
-        </h3>
-        {initialAvailability ? (
-          <StatusBadge
-            tone={
-              initialAvailability.response === "yes"
-                ? "emerald"
-                : initialAvailability.response === "maybe"
-                  ? "amber"
-                  : "rose"
-            }
-          >
-            Saved: {formatResponse(initialAvailability.response)}
-          </StatusBadge>
-        ) : (
-          <StatusBadge>No response</StatusBadge>
-        )}
-      </div>
+      <h4 className="text-sm font-semibold text-slate-900">Can you work?</h4>
 
       <fieldset disabled={isPending} className="mt-3">
         <legend className="sr-only">Choose your availability</legend>
@@ -208,7 +193,7 @@ export function AvailabilityForm({
                 htmlFor={`suggested-start-${shiftId}`}
                 className="form-label-small"
               >
-                Available from
+                I can start at
               </label>
               <input
                 id={`suggested-start-${shiftId}`}
@@ -224,7 +209,7 @@ export function AvailabilityForm({
                 htmlFor={`suggested-end-${shiftId}`}
                 className="form-label-small"
               >
-                Available until
+                I can stay until
               </label>
               <input
                 id={`suggested-end-${shiftId}`}
@@ -274,8 +259,8 @@ export function AvailabilityForm({
             {isPending
               ? "Saving..."
               : initialAvailability
-                ? "Update Response"
-                : "Save Response"}
+                ? "Update Answer"
+                : "Send Answer"}
           </button>
         </div>
       </fieldset>

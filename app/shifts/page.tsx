@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AppIcon } from "@/components/ui/app-icon";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
@@ -83,23 +85,34 @@ export default async function ShiftsPage() {
   }
 
   const availabilityByShift = new Map<string, ExistingAvailability>();
+  const assignedRoleByShift = new Map<string, string>();
 
   if (shifts.length > 0) {
     const shiftIds = shifts.map((shift) => shift.id);
-    const { data: availabilityResponses, error: availabilityError } =
-      await supabase
+    const [availabilityResult, assignmentResult] = await Promise.all([
+      supabase
         .from("availability_responses")
         .select(
           "shift_id, response, suggested_start_time, suggested_end_time, note",
         )
         .eq("user_id", profile.id)
-        .in("shift_id", shiftIds);
+        .in("shift_id", shiftIds),
+      supabase
+        .from("assignments")
+        .select("shift_id, assigned_role")
+        .eq("user_id", profile.id)
+        .in("shift_id", shiftIds),
+    ]);
 
-    if (availabilityError) {
+    if (availabilityResult.error) {
       throw new Error("Unable to load your availability responses.");
     }
 
-    for (const availability of availabilityResponses) {
+    if (assignmentResult.error) {
+      throw new Error("Unable to load your assignments.");
+    }
+
+    for (const availability of availabilityResult.data) {
       if (!isAvailabilityResponse(availability.response)) {
         throw new Error("An availability response has an invalid status.");
       }
@@ -111,17 +124,160 @@ export default async function ShiftsPage() {
         note: availability.note,
       });
     }
+
+    for (const assignment of assignmentResult.data) {
+      assignedRoleByShift.set(assignment.shift_id, assignment.assigned_role);
+    }
   }
+
+  type ShiftRow = (typeof shifts)[number];
+  const isOpen = (shift: ShiftRow) =>
+    new Date(shift.response_deadline).getTime() > requestTimestamp;
+  const needsAnswer = shifts.filter(
+    (shift) =>
+      isOpen(shift) &&
+      !availabilityByShift.has(shift.id) &&
+      !assignedRoleByShift.has(shift.id),
+  );
+  const answered = shifts.filter(
+    (shift) =>
+      isOpen(shift) &&
+      (availabilityByShift.has(shift.id) || assignedRoleByShift.has(shift.id)),
+  );
+  const closed = shifts.filter((shift) => !isOpen(shift));
+
+  function renderShift(shift: ShiftRow) {
+    const initialAvailability = availabilityByShift.get(shift.id) ?? null;
+    const assignedRole = assignedRoleByShift.get(shift.id) ?? null;
+    const deadlinePassed = !isOpen(shift);
+
+    return (
+      <article
+        key={shift.id}
+        id={`shift-${shift.id}`}
+        className="surface-card scroll-mt-32 overflow-hidden p-5 sm:p-6"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h3 className="break-words text-lg font-semibold tracking-tight text-slate-950">
+            {shift.event_name}
+          </h3>
+          {assignedRole ? (
+            <StatusBadge tone="emerald">
+              <AppIcon name="check" className="h-3.5 w-3.5" />
+              You&apos;re working
+            </StatusBadge>
+          ) : initialAvailability ? (
+            <StatusBadge
+              tone={
+                initialAvailability.response === "yes"
+                  ? "emerald"
+                  : initialAvailability.response === "maybe"
+                    ? "amber"
+                    : "rose"
+              }
+            >
+              You said {formatAvailabilityResponse(initialAvailability.response).toLowerCase()}
+            </StatusBadge>
+          ) : deadlinePassed ? (
+            <StatusBadge>No answer</StatusBadge>
+          ) : (
+            <StatusBadge tone="indigo">Needs your answer</StatusBadge>
+          )}
+        </div>
+        <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+          <p className="flex items-center gap-2 font-medium text-slate-800">
+            <AppIcon name="calendar" className="h-4 w-4 text-indigo-500" />
+            {formatShiftDate(shift.date)}
+          </p>
+          <p className="flex items-center gap-2">
+            <AppIcon name="clock" className="h-4 w-4 text-indigo-500" />
+            {formatShiftTime(shift.start_time)} –{" "}
+            {formatShiftTime(shift.end_time)}
+          </p>
+          {shift.location ? (
+            <p className="flex items-center gap-2 sm:col-span-2">
+              <AppIcon name="location" className="h-4 w-4 text-indigo-500" />
+              {shift.location}
+            </p>
+          ) : null}
+          {shift.shift_requirements.length > 0 ? (
+            <p className="flex items-start gap-2 sm:col-span-2">
+              <AppIcon name="users" className="mt-0.5 h-4 w-4 text-indigo-500" />
+              <span>
+                Needs{" "}
+                {[...shift.shift_requirements]
+                  .sort((first, second) => first.role.localeCompare(second.role))
+                  .map((requirement) => `${requirement.staff_needed} ${requirement.role}`)
+                  .join(", ")}
+              </span>
+            </p>
+          ) : null}
+        </div>
+
+        {shift.notes ? (
+          <p className="mt-3 whitespace-pre-wrap rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-100">
+            {shift.notes}
+          </p>
+        ) : null}
+
+        {!deadlinePassed && !assignedRole ? (
+          <p className="mt-3 text-sm text-slate-500">
+            Answer by {formatResponseDeadline(shift.response_deadline)}
+          </p>
+        ) : null}
+
+        {assignedRole ? (
+          <div className="mt-4 flex flex-col gap-3 rounded-xl bg-emerald-50 p-4 ring-1 ring-emerald-100 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-emerald-900">
+              You&apos;re confirmed as <span className="font-semibold">{assignedRole}</span>.
+            </p>
+            <Link href="/schedule" className="btn btn-secondary">
+              View in My Schedule
+            </Link>
+          </div>
+        ) : (
+          <AvailabilityForm
+            shiftId={shift.id}
+            deadlinePassed={deadlinePassed}
+            initialAvailability={initialAvailability}
+          />
+        )}
+      </article>
+    );
+  }
+
+  const sections = [
+    {
+      id: "needs-answer",
+      title: "Needs your answer",
+      description: "Can you work these? Answer before the deadline.",
+      shifts: needsAnswer,
+    },
+    {
+      id: "answered",
+      title: "Already answered",
+      description: "You can change your answer until the deadline.",
+      shifts: answered,
+    },
+    {
+      id: "closed",
+      title: "Answers closed",
+      description: "The deadline has passed for these shifts.",
+      shifts: closed,
+    },
+  ].filter((section) => section.shifts.length > 0);
 
   return (
     <main className="page-shell">
       <div className="mx-auto max-w-4xl">
         <header className="page-header">
           <div>
-            <p className="page-eyebrow">Availability</p>
-            <h1 className="page-title">Available Shifts</h1>
+            <p className="page-eyebrow">Upcoming shifts</p>
+            <h1 className="page-title">Availability</h1>
             <p className="page-description">
-              Review upcoming events and staffing needs.
+              Tell your manager which shifts you can work. Saying yes doesn&apos;t
+              book you. Your manager confirms who works, and confirmed shifts
+              appear in My Schedule.
             </p>
           </div>
         </header>
@@ -135,110 +291,34 @@ export default async function ShiftsPage() {
               No upcoming shifts
             </h2>
             <p className="mt-2 text-sm text-slate-600">
-              There are no current or upcoming shifts to view right now.
+              When your manager posts new shifts, they&apos;ll show up here.
             </p>
           </section>
         ) : (
-          <div className="space-y-4">
-            {shifts.map((shift) => {
-              const initialAvailability =
-                availabilityByShift.get(shift.id) ?? null;
-              const deadlinePassed =
-                new Date(shift.response_deadline).getTime() <= requestTimestamp;
-
-              return (
-                <article
-                  key={shift.id}
-                  id={`shift-${shift.id}`}
-                  className="surface-card scroll-mt-32 overflow-hidden p-5 sm:p-6"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <h2 className="text-xl font-semibold tracking-tight text-slate-950">
-                      {shift.event_name}
-                    </h2>
-                    {initialAvailability ? (
-                      <StatusBadge
-                        tone={
-                          initialAvailability.response === "yes"
-                            ? "emerald"
-                            : initialAvailability.response === "maybe"
-                              ? "amber"
-                              : "rose"
-                        }
-                      >
-                        Response: {formatAvailabilityResponse(initialAvailability.response)}
-                      </StatusBadge>
-                    ) : (
-                      <StatusBadge>No response</StatusBadge>
-                    )}
-                  </div>
-                  <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
-                    <p className="flex items-center gap-2 font-medium text-slate-800">
-                      <AppIcon name="calendar" className="h-4 w-4 text-indigo-500" />
-                      {formatShiftDate(shift.date)}
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <AppIcon name="clock" className="h-4 w-4 text-indigo-500" />
-                      {formatShiftTime(shift.start_time)} –{" "}
-                      {formatShiftTime(shift.end_time)}
-                    </p>
-                    {shift.location ? (
-                      <p className="flex items-center gap-2 sm:col-span-2">
-                        <AppIcon name="location" className="h-4 w-4 text-indigo-500" />
-                        {shift.location}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-5 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                    <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                      <AppIcon name="users" className="h-4 w-4 text-indigo-500" />
-                      Staffing needed
-                    </h3>
-                    <ul className="mt-3 flex flex-wrap gap-2">
-                      {[...shift.shift_requirements]
-                        .sort((first, second) =>
-                          first.role.localeCompare(second.role),
-                        )
-                        .map((requirement) => (
-                          <li
-                            key={requirement.role}
-                            className="rounded-full bg-white px-3 py-1.5 text-sm text-slate-700 ring-1 ring-slate-200"
-                          >
-                            {requirement.role} × {requirement.staff_needed}
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-slate-700">
-                    <StatusBadge tone={deadlinePassed ? "slate" : "amber"}>
-                      {deadlinePassed ? "Responses closed" : "Response open"}
-                    </StatusBadge>
-                    <span>
-                      Deadline: {formatResponseDeadline(shift.response_deadline)}
+          <div className="space-y-10">
+            {needsAnswer.length === 0 ? (
+              <p className="alert-success">
+                {answered.length > 0
+                  ? "You're all caught up. Every open shift has your answer."
+                  : "No shifts are open for answers right now."}
+              </p>
+            ) : null}
+            {sections.map((section) => (
+              <section key={section.id} aria-labelledby={`${section.id}-heading`}>
+                <div className="mb-3">
+                  <h2 id={`${section.id}-heading`} className="section-title">
+                    {section.title}{" "}
+                    <span className="text-base font-medium text-slate-400">
+                      ({section.shifts.length})
                     </span>
-                  </div>
-
-                  {shift.notes ? (
-                    <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                      <h3 className="text-sm font-semibold text-slate-900">
-                        Notes
-                      </h3>
-                      <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
-                        {shift.notes}
-                      </p>
-                    </div>
-                  ) : null}
-
-                  <AvailabilityForm
-                    shiftId={shift.id}
-                    deadlinePassed={deadlinePassed}
-                    initialAvailability={initialAvailability}
-                  />
-                </article>
-              );
-            })}
+                  </h2>
+                  <p className="mt-0.5 text-sm text-slate-500">
+                    {section.description}
+                  </p>
+                </div>
+                <div className="space-y-4">{section.shifts.map(renderShift)}</div>
+              </section>
+            ))}
           </div>
         )}
       </div>
