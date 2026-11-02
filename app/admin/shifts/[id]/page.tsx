@@ -5,6 +5,10 @@ import { AppIcon } from "@/components/ui/app-icon";
 import { MetricCard } from "@/components/ui/metric-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
+import {
+  findAssignmentConflicts,
+  type ConflictingShift,
+} from "@/lib/shifts/conflicts";
 import { createClient } from "@/lib/supabase/server";
 import { DeleteShiftControl } from "./delete-shift-control";
 import {
@@ -26,6 +30,7 @@ type StaffAvailability = {
     note: string | null;
   } | null;
   assignedRole: string | null;
+  conflicts: ConflictingShift[];
 };
 
 const UUID_PATTERN =
@@ -156,7 +161,7 @@ export default async function AdminShiftDetailsPage({
     notFound();
   }
 
-  const [profilesResult, responsesResult, assignmentsResult] =
+  const [profilesResult, responsesResult, assignmentsResult, sameDayResult] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -172,6 +177,14 @@ export default async function AdminShiftDetailsPage({
         .from("assignments")
         .select("id, user_id, assigned_role")
         .eq("shift_id", shift.id),
+      // Other shifts on the same day, to flag staff already booked then.
+      supabase
+        .from("shifts")
+        .select(
+          "id, event_name, date, start_time, end_time, assignments ( user_id, assigned_role )",
+        )
+        .eq("date", shift.date)
+        .neq("id", shift.id),
     ]);
 
   if (profilesResult.error) {
@@ -185,6 +198,12 @@ export default async function AdminShiftDetailsPage({
   if (assignmentsResult.error) {
     throw new Error("Unable to load assignments.");
   }
+
+  if (sameDayResult.error) {
+    throw new Error("Unable to check for scheduling conflicts.");
+  }
+
+  const conflictsByUser = findAssignmentConflicts(shift, sameDayResult.data);
 
   const responsesByUser = new Map(
     responsesResult.data.map((response) => [response.user_id, response]),
@@ -234,6 +253,7 @@ export default async function AdminShiftDetailsPage({
           }
         : null,
       assignedRole: assignment?.assigned_role ?? null,
+      conflicts: conflictsByUser.get(profile.id) ?? [],
     };
   });
 
@@ -492,6 +512,34 @@ export default async function AdminShiftDetailsPage({
                             {formatTime(member.response.suggestedEndTime)}
                           </p>
                         ) : null}
+                      </div>
+                    ) : null}
+
+                    {member.conflicts.length > 0 ? (
+                      <div
+                        role="note"
+                        className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900"
+                      >
+                        <p className="font-semibold">
+                          {member.assignedRole
+                            ? "Double-booked: also assigned to an overlapping shift"
+                            : "Already assigned to an overlapping shift"}
+                        </p>
+                        <ul className="mt-1 space-y-0.5">
+                          {member.conflicts.map((conflict) => (
+                            <li key={conflict.shiftId}>
+                              <Link
+                                href={`/admin/shifts/${conflict.shiftId}`}
+                                className="font-medium underline decoration-amber-400 underline-offset-2 hover:decoration-amber-700"
+                              >
+                                {conflict.eventName}
+                              </Link>{" "}
+                              · {formatTime(conflict.startTime)} –{" "}
+                              {formatTime(conflict.endTime)} ·{" "}
+                              {conflict.assignedRole}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     ) : null}
 
