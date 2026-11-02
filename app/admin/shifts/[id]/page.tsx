@@ -9,6 +9,12 @@ import {
   findAssignmentConflicts,
   type ConflictingShift,
 } from "@/lib/shifts/conflicts";
+import {
+  addDays,
+  formatMinutes,
+  getShiftMinutes,
+  getWeekStart,
+} from "@/lib/shifts/hours";
 import { createClient } from "@/lib/supabase/server";
 import { DeleteShiftControl } from "./delete-shift-control";
 import {
@@ -31,6 +37,7 @@ type StaffAvailability = {
   } | null;
   assignedRole: string | null;
   conflicts: ConflictingShift[];
+  weekMinutes: number;
 };
 
 const UUID_PATTERN =
@@ -76,6 +83,16 @@ function formatTime(time: string) {
   const twelveHour = hours % 12 || 12;
 
   return `${twelveHour}:${String(minutes).padStart(2, "0")} ${period}`;
+}
+
+const weekStartFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  timeZone: "UTC",
+});
+
+function formatWeekStart(date: string) {
+  return weekStartFormatter.format(new Date(`${date}T00:00:00Z`));
 }
 
 function formatDeadline(deadline: string) {
@@ -161,7 +178,8 @@ export default async function AdminShiftDetailsPage({
     notFound();
   }
 
-  const [profilesResult, responsesResult, assignmentsResult, sameDayResult] =
+  const weekStart = getWeekStart(shift.date);
+  const [profilesResult, responsesResult, assignmentsResult, weekShiftsResult] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -177,14 +195,15 @@ export default async function AdminShiftDetailsPage({
         .from("assignments")
         .select("id, user_id, assigned_role")
         .eq("shift_id", shift.id),
-      // Other shifts on the same day, to flag staff already booked then.
+      // Every shift in this shift's week (Mon–Sun): used for overlap
+      // warnings and each person's scheduled hours that week.
       supabase
         .from("shifts")
         .select(
           "id, event_name, date, start_time, end_time, assignments ( user_id, assigned_role )",
         )
-        .eq("date", shift.date)
-        .neq("id", shift.id),
+        .gte("date", weekStart)
+        .lte("date", addDays(weekStart, 6)),
     ]);
 
   if (profilesResult.error) {
@@ -199,11 +218,25 @@ export default async function AdminShiftDetailsPage({
     throw new Error("Unable to load assignments.");
   }
 
-  if (sameDayResult.error) {
+  if (weekShiftsResult.error) {
     throw new Error("Unable to check for scheduling conflicts.");
   }
 
-  const conflictsByUser = findAssignmentConflicts(shift, sameDayResult.data);
+  const conflictsByUser = findAssignmentConflicts(
+    shift,
+    weekShiftsResult.data.filter((other) => other.date === shift.date),
+  );
+  const weekMinutesByUser = new Map<string, number>();
+
+  for (const weekShift of weekShiftsResult.data) {
+    for (const assignment of weekShift.assignments ?? []) {
+      weekMinutesByUser.set(
+        assignment.user_id,
+        (weekMinutesByUser.get(assignment.user_id) ?? 0) +
+          getShiftMinutes(weekShift),
+      );
+    }
+  }
 
   const responsesByUser = new Map(
     responsesResult.data.map((response) => [response.user_id, response]),
@@ -254,6 +287,7 @@ export default async function AdminShiftDetailsPage({
         : null,
       assignedRole: assignment?.assigned_role ?? null,
       conflicts: conflictsByUser.get(profile.id) ?? [],
+      weekMinutes: weekMinutesByUser.get(profile.id) ?? 0,
     };
   });
 
@@ -489,6 +523,14 @@ export default async function AdminShiftDetailsPage({
                         </p>
                         <p className="text-sm text-slate-500">
                           @{member.username}
+                        </p>
+                        <p className="mt-1 flex items-center gap-1 text-xs text-slate-600">
+                          <AppIcon name="clock" className="h-3.5 w-3.5 text-indigo-500" />
+                          Week of {formatWeekStart(weekStart)}:{" "}
+                          <span className="font-semibold tabular-nums text-slate-900">
+                            {formatMinutes(member.weekMinutes)}
+                          </span>{" "}
+                          scheduled
                         </p>
                       </div>
                       <StatusBadge tone={getStatusTone(status)}>

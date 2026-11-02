@@ -16,7 +16,7 @@ export function MetricCard({
   description,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   tone: keyof typeof toneClasses;
   icon?: ReactNode;
   description?: string;

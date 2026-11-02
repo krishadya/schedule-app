@@ -5,10 +5,42 @@ import { AppIcon } from "@/components/ui/app-icon";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
+import { getAppDateKey } from "@/lib/date";
 import { getAvatarUrl } from "@/lib/profile/avatar";
+import {
+  addDays,
+  formatMinutes,
+  getWeekStart,
+  getWeeklyMinutes,
+  type TimedShift,
+} from "@/lib/shifts/hours";
 import { createClient } from "@/lib/supabase/server";
 import { CreateStaffForm } from "./create-staff-form";
 import { ResetPasswordControl } from "./reset-password-control";
+
+function HoursSummary({
+  minutes,
+}: {
+  minutes: { thisWeek: number; nextWeek: number };
+}) {
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
+      <span className="flex items-center gap-1">
+        <AppIcon name="clock" className="h-3.5 w-3.5 text-indigo-500" />
+        This week{" "}
+        <span className="font-semibold tabular-nums text-slate-900">
+          {formatMinutes(minutes.thisWeek)}
+        </span>
+      </span>
+      <span>
+        Next week{" "}
+        <span className="font-semibold tabular-nums text-slate-900">
+          {formatMinutes(minutes.nextWeek)}
+        </span>
+      </span>
+    </p>
+  );
+}
 
 export default async function AdminStaffPage() {
   const authenticatedProfile = await getAuthenticatedProfile();
@@ -18,15 +50,40 @@ export default async function AdminStaffPage() {
   }
 
   const supabase = await createClient();
-  const { data: staff, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("role", "staff")
-    .order("full_name", { ascending: true })
-    .order("username", { ascending: true });
+  const today = getAppDateKey();
+  const weekStart = getWeekStart(today);
+  const [staffResult, shiftsResult] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("role", "staff")
+      .order("full_name", { ascending: true })
+      .order("username", { ascending: true }),
+    // Confirmed shifts this week and next, for scheduled-hours totals.
+    supabase
+      .from("shifts")
+      .select("date, start_time, end_time, assignments ( user_id )")
+      .gte("date", weekStart)
+      .lte("date", addDays(weekStart, 13)),
+  ]);
 
-  if (error) {
+  if (staffResult.error) {
     throw new Error("Unable to load staff profiles.");
+  }
+
+  if (shiftsResult.error) {
+    throw new Error("Unable to load scheduled hours.");
+  }
+
+  const staff = staffResult.data;
+  const shiftsByUser = new Map<string, TimedShift[]>();
+
+  for (const shift of shiftsResult.data) {
+    for (const assignment of shift.assignments ?? []) {
+      const shifts = shiftsByUser.get(assignment.user_id) ?? [];
+      shifts.push(shift);
+      shiftsByUser.set(assignment.user_id, shifts);
+    }
   }
 
   return (
@@ -58,7 +115,7 @@ export default async function AdminStaffPage() {
                   Staff Accounts
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  Existing staff profiles.
+                  Existing staff profiles and confirmed hours (Mon–Sun).
                 </p>
               </div>
               <p className="text-sm text-slate-600">
@@ -102,6 +159,12 @@ export default async function AdminStaffPage() {
                         <p className="break-all text-sm text-slate-500">
                           @{staffMember.username}
                         </p>
+                        <HoursSummary
+                          minutes={getWeeklyMinutes(
+                            shiftsByUser.get(staffMember.id) ?? [],
+                            today,
+                          )}
+                        />
                       </div>
                     </div>
                     {staffMember.role === "staff" ? (

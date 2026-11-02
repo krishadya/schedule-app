@@ -1,9 +1,16 @@
 import Link from "next/link";
 
 import { AppIcon } from "@/components/ui/app-icon";
+import { MetricCard } from "@/components/ui/metric-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getAuthenticatedProfile } from "@/lib/auth/profile";
 import { getAppDateKey } from "@/lib/date";
+import {
+  formatMinutes,
+  getShiftMinutes,
+  getWeekStart,
+  getWeeklyMinutes,
+} from "@/lib/shifts/hours";
 import { createClient } from "@/lib/supabase/server";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -30,6 +37,8 @@ export default async function SchedulePage() {
   const profile = await getAuthenticatedProfile();
   const supabase = await createClient();
   const today = getAppDateKey();
+  // Load from the start of this week so hours already worked this week count.
+  const weekStart = getWeekStart(today);
   const { data: assignments, error } = await supabase
     .from("assignments")
     .select("id, shift_id, assigned_role")
@@ -61,7 +70,7 @@ export default async function SchedulePage() {
         "id",
         assignments.map((assignment) => assignment.shift_id),
       )
-      .gte("date", today);
+      .gte("date", weekStart);
 
     if (shiftsError) {
       throw new Error("Unable to load your assigned shifts.");
@@ -83,6 +92,12 @@ export default async function SchedulePage() {
         : [];
     });
   }
+
+  const weeklyMinutes = getWeeklyMinutes(
+    schedule.map((assignment) => assignment.shift),
+    today,
+  );
+  schedule = schedule.filter((assignment) => assignment.shift.date >= today);
 
   schedule.sort((first, second) => {
     const dateDifference = first.shift.date.localeCompare(second.shift.date);
@@ -112,6 +127,33 @@ export default async function SchedulePage() {
             Back to Dashboard
           </Link>
         </header>
+
+        <section
+          aria-label="Scheduled hours"
+          className="mb-6 grid grid-cols-3 gap-3"
+        >
+          <MetricCard
+            label="This week"
+            value={formatMinutes(weeklyMinutes.thisWeek)}
+            tone="indigo"
+            icon={<AppIcon name="clock" className="h-4 w-4" />}
+            description="Mon–Sun, confirmed"
+          />
+          <MetricCard
+            label="Next week"
+            value={formatMinutes(weeklyMinutes.nextWeek)}
+            tone="slate"
+            icon={<AppIcon name="clock" className="h-4 w-4" />}
+            description="Mon–Sun, confirmed"
+          />
+          <MetricCard
+            label="Upcoming"
+            value={schedule.length}
+            tone="emerald"
+            icon={<AppIcon name="check" className="h-4 w-4" />}
+            description={schedule.length === 1 ? "Shift" : "Shifts"}
+          />
+        </section>
 
         {schedule.length === 0 ? (
           <section className="empty-state">
@@ -151,6 +193,9 @@ export default async function SchedulePage() {
                     <AppIcon name="clock" className="h-4 w-4 text-indigo-500" />
                     {formatTime(assignment.shift.start_time)} –{" "}
                     {formatTime(assignment.shift.end_time)}
+                    <span className="text-slate-400">
+                      · {formatMinutes(getShiftMinutes(assignment.shift))}
+                    </span>
                   </p>
                   {assignment.shift.location ? (
                     <p className="flex items-center gap-2 sm:col-span-2">

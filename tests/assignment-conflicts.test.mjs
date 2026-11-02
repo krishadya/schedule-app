@@ -119,7 +119,7 @@ test("conflicts are grouped by staff member and skip non-overlapping shifts", ()
   assert.equal(result.has("jo"), false);
 });
 
-test("shift details loads same-day shifts for conflict warnings without changing assignment rules", () => {
+test("shift details loads the week's shifts for conflict warnings without changing assignment rules", () => {
   const detailPage = readFileSync(
     resolve(root, "app/admin/shifts/[id]/page.tsx"),
     "utf8",
@@ -129,9 +129,12 @@ test("shift details loads same-day shifts for conflict warnings without changing
     "utf8",
   );
 
-  assert.match(detailPage, /\.eq\("date", shift\.date\)/);
-  assert.match(detailPage, /\.neq\("id", shift\.id\)/);
-  assert.match(detailPage, /findAssignmentConflicts\(shift, sameDayResult\.data\)/);
+  assert.match(detailPage, /\.gte\("date", weekStart\)/);
+  assert.match(detailPage, /\.lte\("date", addDays\(weekStart, 6\)\)/);
+  assert.match(
+    detailPage,
+    /findAssignmentConflicts\(\s*shift,\s*weekShiftsResult\.data\.filter\(\(other\) => other\.date === shift\.date\),?\s*\)/,
+  );
   // Conflicts are a warning only; assigning is unchanged.
   assert.doesNotMatch(actions, /conflict/i);
 });
